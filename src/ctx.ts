@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { Routine, Rule, State, Task } from "./types";
+import type { Actual, Routine, Rule, State, Task } from "./types";
 
 export type SheetState =
   | { type: "block"; date: string; task?: Task; start?: string; title?: string; fromNote?: string }
@@ -11,11 +11,12 @@ export type SheetState =
   | { type: "note"; noteId: string }
   | { type: "rule"; rule: Rule }
   | { type: "account" }
+  | { type: "entry"; date: string; entry?: Actual; start?: number; end?: number }
   | null;
 
 export type ToastAction = { label: string; run: () => void };
 
-export type Tab = "day" | "week" | "routines" | "playbook" | "patterns";
+export type Tab = "day" | "myday" | "week" | "routines" | "playbook" | "patterns";
 
 export interface AppCtx {
   state: State;

@@ -4,6 +4,7 @@ import type { Task } from "../types";
 import { addDays, fmt, toMin, uid } from "../lib/time";
 import { materialize, remindLabel, rulesFor } from "../lib/plan";
 import { scoreRules } from "../lib/actions";
+import { syncActuals } from "../lib/actuals";
 import { Sheet } from "./Sheet";
 
 const STATUS_LABEL = { done: "done", partial: "partly done", ifnot: "'if not' version", missed: "missed", open: "", skipped: "" };
@@ -18,6 +19,7 @@ export function LogSheet({ task }: { task: Task }) {
       const t = materialize(s, task);
       t.status = status;
       scoreRules(s, t, true);
+      syncActuals(s, t);
       id = t.id;
     });
     if (status === "done") setTimeout(() => open({ type: "actual", taskId: id, planned: task.dur }));
@@ -40,6 +42,7 @@ export function LogSheet({ task }: { task: Task }) {
       t.actual = undefined;
       t.instead = undefined;
       t.share = undefined;
+      syncActuals(s, t);
     });
     close();
   };
@@ -78,7 +81,7 @@ export function LogSheet({ task }: { task: Task }) {
 export function ActualSheet({ taskId, planned }: { taskId: string; planned: number }) {
   const { update, close, toast } = useApp();
   const set = (n: number) => {
-    update((s) => { const t = s.tasks.find((x) => x.id === taskId); if (t) t.actual = n; });
+    update((s) => { const t = s.tasks.find((x) => x.id === taskId); if (t) { t.actual = n; syncActuals(s, t); } });
     close();
     toast("Logged.");
   };

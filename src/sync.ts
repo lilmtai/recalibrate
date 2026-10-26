@@ -28,6 +28,7 @@ export function merge(a: State, b: State): State {
     rules: byId(older.rules, newer.rules),
     checkins: { ...older.checkins, ...newer.checkins },
     notes: byId(older.notes || [], newer.notes || []),
+    actuals: byId(older.actuals || [], newer.actuals || []),
     updatedAt: Date.now(),
   };
 }

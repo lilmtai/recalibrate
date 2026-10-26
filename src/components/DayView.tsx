@@ -5,6 +5,7 @@ import type { Task } from "../types";
 import { addDays, DAY_SHORT, fmt, fmtDur, norm, nowMin, parseKey, toMin, today, uid, weekday } from "../lib/time";
 import { cuesFor, materialize, needsLog, notesFor, tasksFor, unplacedFor } from "../lib/plan";
 import { isWin, multiplier } from "../lib/stats";
+import { daySummary } from "../lib/actuals";
 import { HOUR, snap, Timeline } from "./Timeline";
 
 type TrayItem = { kind: "note" | "task"; id: string; title: string; dur: number };
@@ -31,6 +32,7 @@ export function DayView({ reminders }: { reminders: { permission: string; enable
       s.routines = s.routines.filter((r) => !r.ex);
       s.rules = s.rules.filter((r) => !r.ex);
       s.notes = s.notes.filter((n) => !n.ex);
+      s.actuals = s.actuals.filter((a) => !a.ex);
       for (const k of Object.keys(s.checkins)) if (s.checkins[k].ex) delete s.checkins[k];
     });
 
@@ -334,16 +336,19 @@ function CuesCard({ cues, now }: { cues: ReturnType<typeof cuesFor>; now: number
 }
 
 function DayScore({ tasks }: { tasks: Task[] }) {
-  const { state } = useApp();
+  const { state, date, now, setTab } = useApp();
   const mx = multiplier(state);
+  const sum = daySummary(state, date, date === today() ? now : 1440);
   return (
     <div className="card"><h2>This day</h2>
       <ul className="list">
         <li><span className="grow">Followed through</span><span className="time">{tasks.filter(isWin).length}/{tasks.length}</span></li>
         <li><span className="grow">Logged</span><span className="time">{tasks.filter((t) => t.status !== "open").length}/{tasks.length}</span></li>
         <li><span className="grow">Planned</span><span className="time">{fmtDur(tasks.reduce((a, t) => a + t.dur, 0))}</span></li>
+        <li><span className="grow">Went as planned</span><span className="time">{fmtDur(sum.onPlan)}</span></li>
         {mx && <li><span className="grow">Your time multiplier</span><span className="time">{mx.toFixed(1)}×</span></li>}
       </ul>
+      <div className="actions"><button className="btn small" onClick={() => setTab("myday")}>Compare with My day →</button></div>
     </div>
   );
 }

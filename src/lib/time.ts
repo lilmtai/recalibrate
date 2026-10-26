@@ -32,3 +32,6 @@ export const longDate = (k: string) =>
   parseKey(k).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
 export const uid = () => Math.random().toString(36).slice(2, 10);
 export const norm = (s: string) => s.toLowerCase().trim();
+/** Compact duration for tight spaces: 45m, 1h, 2h20 */
+export const fmtShort = (min: number) =>
+  min < 60 ? `${Math.round(min)}m` : `${Math.floor(min / 60)}h${min % 60 ? pad(Math.round(min % 60)) : ""}`;

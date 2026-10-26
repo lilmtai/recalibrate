@@ -89,6 +89,25 @@ export interface CheckIn {
   ex?: boolean;
 }
 
+/**
+ * One stretch of what really happened (the "My day" column).
+ * kind: plan = did (part of) a planned block, instead = something else during a planned block,
+ * free = anything else you log. auto = written by logging a block; manual entries are kept as-is.
+ */
+export interface Actual {
+  id: string;
+  date: string;
+  start: number; // minutes after midnight
+  end?: number; // undefined while it's running ("Now doing")
+  title: string;
+  kind: "plan" | "instead" | "free";
+  category?: CategoryKey;
+  insteadKey?: InsteadKey;
+  taskId?: string;
+  auto?: boolean;
+  ex?: boolean;
+}
+
 export interface State {
   v: 2;
   tasks: Task[];
@@ -96,6 +115,7 @@ export interface State {
   rules: Rule[];
   checkins: Record<string, CheckIn>;
   notes: Note[];
+  actuals: Actual[];
   /** ms timestamp of the last local edit, used for sync */
   updatedAt?: number;
 }

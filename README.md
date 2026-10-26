@@ -17,6 +17,7 @@ npm run build    # production build in dist/
 - **Reorganize**: drag blocks to move them, drag the bottom edge to change length, send blocks to a tray (or "Clear the rest of today") and drag them back where they fit.
 - **Log what really happened**: Done / Partly done / "If not" version / Didn't happen. For partial or missed blocks, one tap logs what filled the time instead (phone, other work, hyperfocus, people…).
 - **Check-ins**: a halfway "still on it?" prompt and an end-of-block "log it" prompt (in-app, and as notifications when allowed). Blocks that ended without a log are listed at the top of the day.
+- **My day**: a second timeline beside the plan showing what really happened. Logging a block fills it in automatically (done, the part done plus what took the rest, or what filled a missed slot). "What are you doing right now?" starts a running entry in one tap; tap any empty spot to add something you did. A summary compares planned vs. actual time overall and per area.
 - **Week**: plan Monday–Sunday, see hours per area, copy last week's blocks.
 - **Routines**: sticky blocks that repeat on chosen weekdays (training, deep work, wind-down).
 - **Playbook**: the if-then rules you created from misses, with a "worked X of Y" score.

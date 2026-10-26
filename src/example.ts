@@ -1,5 +1,6 @@
 import type { CategoryKey, Energy, State, Status, Task } from "./types";
 import { addDays, today, uid, weekday } from "./lib/time";
+import { syncActuals } from "./lib/actuals";
 
 /** Fills the planner with a realistic past week, routines and rules. Everything is flagged `ex` so it can be cleared. */
 export function loadExample(s: State) {
@@ -56,4 +57,14 @@ export function loadExample(s: State) {
     mk(0, "Client calls", "15:00", 60, "side", "med", "Send a voice note", "open"),
     mk(1, "Coffee with Maya", "17:00", 45, "social", "low", "Text to reschedule", "open"),
   );
+
+  // "My day": fill in what really happened from the logged blocks, plus a few unplanned things
+  for (const t of s.tasks.filter((x) => x.ex && x.status !== "open")) syncActuals(s, t);
+  const free = (d: number, start: number, end: number, title: string, category?: CategoryKey) =>
+    s.actuals.push({ id: uid(), date: addDays(T, d), start, end, title, kind: "free", category, ex: true });
+  free(-1, 7 * 60 + 40, 8 * 60 + 25, "Phone in bed");
+  free(-1, 12 * 60 + 30, 13 * 60 + 20, "Lunch with team", "social");
+  free(-1, 16 * 60, 17 * 60 + 10, "Fixed a client bug (unplanned)", "side");
+  free(-1, 20 * 60 + 30, 22 * 60, "Series on Netflix", "me");
+  free(0, 7 * 60 + 15, 7 * 60 + 50, "Phone in bed");
 }

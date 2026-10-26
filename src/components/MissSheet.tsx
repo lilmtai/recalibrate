@@ -5,6 +5,7 @@ import type { BarrierKey, InsteadKey, Remind, Rule, Task } from "../types";
 import { addDays, norm, today, uid } from "../lib/time";
 import { materialize, remindLabel } from "../lib/plan";
 import { scoreRules } from "../lib/actions";
+import { syncActuals } from "../lib/actuals";
 import { Chips, Sheet } from "./Sheet";
 
 const sameRemind = (a: Remind, b: Remind) => JSON.stringify(a) === JSON.stringify(b);
@@ -43,6 +44,7 @@ export function MissSheet({ task, rule, partial }: { task?: Task; rule?: Rule; p
       t.barrier = barrier;
       t.instead = instead.length || insteadNote.trim() ? { what: instead, note: insteadNote.trim() || undefined } : undefined;
       scoreRules(s, t, !!partial);
+      syncActuals(s, t);
       if (addRule && !s.rules.some((r) => norm(r.match) === norm(match) && norm(r.fix) === norm(fix))) {
         s.rules.push({ id: uid(), match: match.trim() || norm(task.title), barrier: barrier!, fix: fix.trim(), remind, created: addDays(today(), 1), wins: 0, fails: 0 });
       }

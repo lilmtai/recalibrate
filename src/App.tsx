@@ -8,6 +8,8 @@ import { longDate, nowMin, today } from "./lib/time";
 import { loadExample } from "./example";
 import { DayView } from "./components/DayView";
 import { WeekView } from "./components/WeekView";
+import { MyDayView } from "./components/MyDayView";
+import { EntrySheet } from "./components/EntrySheet";
 import { RoutinesView } from "./components/RoutinesView";
 import { PlaybookView } from "./components/PlaybookView";
 import { PatternsView } from "./components/PatternsView";
@@ -19,6 +21,7 @@ import { useSync } from "./sync";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "day", label: "Day" },
+  { key: "myday", label: "My day" },
   { key: "week", label: "Week" },
   { key: "routines", label: "Routines" },
   { key: "playbook", label: "Playbook" },
@@ -64,6 +67,7 @@ export default function App() {
 
   const title =
     tab === "day" ? longDate(date)
+    : tab === "myday" ? `My day · ${longDate(date)}`
     : tab === "week" ? "Week plan"
     : tab === "routines" ? "Routines"
     : tab === "playbook" ? "Your playbook"
@@ -98,6 +102,7 @@ export default function App() {
 
         <main>
           {tab === "day" && <DayView reminders={reminders} />}
+          {tab === "myday" && <MyDayView />}
           {tab === "week" && <WeekView />}
           {tab === "routines" && <RoutinesView />}
           {tab === "playbook" && <PlaybookView />}
@@ -113,6 +118,7 @@ export default function App() {
       {sheet?.type === "check" && <CheckSheet task={sheet.task} />}
       {sheet?.type === "rule" && <MissSheet rule={sheet.rule} />}
       {sheet?.type === "account" && <AccountSheet sync={sync} />}
+      {sheet?.type === "entry" && <EntrySheet key={sheet.entry?.id || "new"} date={sheet.date} entry={sheet.entry} start={sheet.start} end={sheet.end} />}
 
       <div className="toasts" aria-live="polite">
         {toasts.map((t) => (
