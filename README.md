@@ -1,34 +1,49 @@
 # Recalibrate
 
-A calm ADHD planner for high achievers. Plan your day on a visual timeline, log why a block didn't happen, and turn each reason into an if-then fix that shows up as a prep cue next time.
+A calm ADHD planner for high achievers. Plan your day and week on a visual timeline, log why a block didn't happen, and turn each reason into an if-then fix that reminds you next time.
 
-## Run it locally
-
-It's a single file with no build step.
-
-- Quickest: double-click `index.html` to open it in your browser.
-- Or serve it (recommended, closer to how it runs online):
+## Run it
 
 ```bash
-npx serve .
-# then open http://localhost:3000
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # production build in dist/
 ```
 
-## Where data is saved
+## What's in it
 
-Outside Claude, everything is saved in your browser (localStorage). It stays on that one browser and device. Clearing site data erases it.
+- **Day**: timeline coloured by area (Main work, Health, Social, Side hustle, Me time), energy/sleep check-in, "Now" card, reminders, "never miss twice" banner. Click an empty slot to add a block there.
+- **Week**: plan Monday–Sunday, see hours per area, copy last week's blocks.
+- **Routines**: sticky blocks that repeat on chosen weekdays (training, deep work, wind-down).
+- **Playbook**: the if-then rules you created from misses, with a "worked X of Y" score.
+- **Patterns**: follow-through by area, energy and sleep, top barriers, time-estimate multiplier.
 
-The AI coach buttons only appear when the page runs inside Claude. Running the coach elsewhere needs a small backend that calls the Claude API (see "Next steps").
+Blocks take a start time plus an optional finish time or duration (fill one, the other follows), an optional energy level, and an "If not…" fallback for bad days.
 
-## Publish it with GitHub Pages
+Fixes can remind you a set time before the block, or at a clock time (for example 21:00 the night before: "set an alarm for tomorrow").
 
-1. Push this folder to a GitHub repository.
-2. In the repo: Settings → Pages → Source: "Deploy from a branch" → branch `main`, folder `/ (root)`.
-3. After a minute your planner is live at `https://<your-username>.github.io/<repo-name>/`.
+## Code map
+
+```
+src/
+  App.tsx              tabs, pop-up panels, toasts
+  ctx.ts               shared app context
+  store.ts             localStorage save/load + migration from the first version
+  types.ts             data model
+  constants.ts         categories, barriers, suggested fixes
+  useReminders.ts      in-app + browser notifications while the app is open
+  example.ts           sample week
+  lib/                 time helpers, plan (routines, reminders), stats
+  components/          views and forms
+```
+
+## Data
+
+Saved in the browser (localStorage). Reminders fire only while the app is open in a tab.
 
 ## Next steps
 
-- Repeating routines, a focus timer and a weekly planning view.
-- Accounts and sync across devices (for example Supabase or Firebase).
-- Real reminders: make it an installable PWA with push notifications.
-- AI coach outside Claude: a serverless function that calls the Claude API, so the API key never sits in the browser.
+1. Accounts + sync across devices (Supabase).
+2. Installable PWA with push notifications, so reminders work when the app is closed.
+3. Focus timer.
+4. AI coach via a serverless function calling the Claude API.
