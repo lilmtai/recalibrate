@@ -14,13 +14,13 @@ const ENERGY_OPTS: { key: Energy | "none"; label: string }[] = [
 ];
 
 /** Add or edit a single block, or a routine (sticky block) when `routine` mode is on. */
-export function BlockSheet({ date, task, routine, routineMode, start: startHint }: {
-  date?: string; task?: Task; routine?: Routine; routineMode?: boolean; start?: string;
+export function BlockSheet({ date, task, routine, routineMode, start: startHint, title: titleHint, fromNote }: {
+  date?: string; task?: Task; routine?: Routine; routineMode?: boolean; start?: string; title?: string; fromNote?: string;
 }) {
   const { state, update, close, toast } = useApp();
   const src = task || routine;
   const defStart = startHint || fmt(Math.ceil((nowMin() + 15) / 15) * 15);
-  const [title, setTitle] = useState(src?.title || "");
+  const [title, setTitle] = useState(src?.title || titleHint || "");
   const [category, setCategory] = useState<CategoryKey>(src?.category || "work");
   const [start, setStart] = useState(src?.start || defStart);
   const [dur, setDur] = useState(src ? String(src.dur) : "");
@@ -71,6 +71,7 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint 
       } else {
         s.tasks.push({ id: uid(), date: date!, status: "open", ...data });
       }
+      if (fromNote) s.notes = s.notes.filter((n) => n.id !== fromNote);
     });
     toast(isRoutine && !task ? (routine ? "Routine updated." : `Routine added: ${days.map((x) => DAY_SHORT[x]).join(", ")}.`) : "Saved.");
     close();

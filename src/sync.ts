@@ -27,11 +27,12 @@ export function merge(a: State, b: State): State {
     routines: byId(older.routines, newer.routines),
     rules: byId(older.rules, newer.rules),
     checkins: { ...older.checkins, ...newer.checkins },
+    notes: byId(older.notes || [], newer.notes || []),
     updatedAt: Date.now(),
   };
 }
 
-const hasData = (s: State) => s.tasks.length + s.routines.length + s.rules.length > 0;
+const hasData = (s: State) => s.tasks.length + s.routines.length + s.rules.length + (s.notes?.length || 0) > 0;
 
 /**
  * Keeps the planner in sync with Supabase when signed in.

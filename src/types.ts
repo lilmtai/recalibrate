@@ -2,8 +2,33 @@ export type Energy = "low" | "med" | "high";
 export type CategoryKey = "work" | "health" | "social" | "side" | "me";
 export type BarrierKey =
   | "energy" | "bloated" | "overwhelm" | "time" | "forgot" | "avoid" | "sleep" | "cameup";
-/** done = full block, ifnot = did the "if not" fallback, skipped = removed for that day */
-export type Status = "open" | "done" | "ifnot" | "missed" | "skipped";
+export type InsteadKey =
+  | "phone" | "otherwork" | "urgent" | "rest" | "food" | "chores" | "people" | "hyperfocus" | "late" | "unknown";
+/** done = full block, partial = some of it, ifnot = did the "if not" fallback, skipped = removed for that day */
+export type Status = "open" | "done" | "partial" | "ifnot" | "missed" | "skipped";
+
+/** What actually filled the time when a block didn't (fully) happen. */
+export interface Instead {
+  what: InsteadKey[];
+  note?: string;
+}
+
+/** A mid-block check-in: were you on it? */
+export interface Check {
+  at: number; // minutes after midnight
+  on: boolean;
+  what?: InsteadKey[];
+}
+
+/** A post-it: something to do today with no time slot yet. Unfinished ones roll over. */
+export interface Note {
+  id: string;
+  date: string;
+  text: string;
+  done: boolean;
+  doneDate?: string;
+  ex?: boolean;
+}
 
 export interface Task {
   id: string;
@@ -19,6 +44,12 @@ export interface Task {
   barrier?: BarrierKey;
   note?: string;
   routineId?: string;
+  /** in the reorganize tray, not on the timeline */
+  unplaced?: boolean;
+  /** share of the block done, for "partial" (0.25 / 0.5 / 0.75) */
+  share?: number;
+  instead?: Instead;
+  checks?: Check[];
   ex?: boolean;
 }
 
@@ -64,6 +95,7 @@ export interface State {
   routines: Routine[];
   rules: Rule[];
   checkins: Record<string, CheckIn>;
+  notes: Note[];
   /** ms timestamp of the last local edit, used for sync */
   updatedAt?: number;
 }
@@ -75,5 +107,6 @@ export interface Cue {
   forTask: string;
   barrier?: BarrierKey;
   tomorrow: boolean;
-  kind: "fix" | "transition";
+  kind: "fix" | "transition" | "mid" | "end";
+  taskId?: string;
 }

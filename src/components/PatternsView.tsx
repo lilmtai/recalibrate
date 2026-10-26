@@ -1,7 +1,7 @@
 import { useApp } from "../ctx";
-import { BARRIER_LABEL, CATEGORIES } from "../constants";
-import type { BarrierKey } from "../types";
-import { norm } from "../lib/time";
+import { BARRIER_LABEL, CATEGORIES, INSTEAD_LABEL } from "../constants";
+import type { BarrierKey, InsteadKey } from "../types";
+import { fmtDur, norm } from "../lib/time";
 import { multiplier, stats14 } from "../lib/stats";
 import { loadExample } from "../example";
 
@@ -34,14 +34,21 @@ export function PatternsView() {
     insights.push(`**${cats[0].label}** is your weakest area at **${s.byCategory[cats[0].key]}%**, while ${cats[cats.length - 1].label.toLowerCase()} sits at ${s.byCategory[cats[cats.length - 1].key]}%.`);
   const topB = Object.entries(s.barriers).sort((a, b) => b[1] - a[1])[0];
   if (topB && topB[1] >= 2) insights.push(`Your most common barrier is **${BARRIER_LABEL[topB[0] as BarrierKey].toLowerCase()}** (${topB[1]}×). Fix the system for that one first.`);
+  const topI = Object.entries(s.instead).sort((a, b) => b[1] - a[1])[0];
+  if (topI && topI[1] >= 30) insights.push(`When blocks slip, the time mostly goes to **${INSTEAD_LABEL[topI[0] as InsteadKey].toLowerCase()}** (${fmtDur(topI[1])} in two weeks).`);
+  const under = s.estimates.find((e) => e.ratio >= 1.25 && e.n >= 2);
+  if (under) insights.push(`**${under.title}** is planned at ${under.planned} min but takes about **${under.actual} min**. Book it longer.`);
+  if (s.drift != null && s.checks >= 3 && s.drift >= 30) insights.push(`At halfway check-ins you were off track **${s.drift}%** of the time. Shorter blocks or a body-double may help.`);
   if (mx && mx > 1.2) insights.push(`Blocks take **${mx.toFixed(1)}×** longer than you plan. Your 60-minute tasks are really ${Math.round(60 * mx)}-minute tasks.`);
 
   const bmax = Math.max(1, ...Object.values(s.barriers));
+  const imax = Math.max(1, ...Object.values(s.instead));
   return (
     <>
       <div className="stats">
         <div className="card stat"><div className="v">{s.rate}%</div><div className="k">Follow-through ({s.ts.length} blocks logged)</div></div>
         <div className="card stat"><div className="v">{s.ifNots}</div><div className="k">Saved by the “if not” version</div></div>
+        <div className="card stat"><div className="v">{s.partials}</div><div className="k">Partly done (counted as half or less)</div></div>
         <div className="card stat"><div className="v">{mx ? `${mx.toFixed(1)}×` : "—"}</div><div className="k">{mx ? "Actual time vs. planned" : "Log actual time on 3+ blocks to see this"}</div></div>
       </div>
       <div className="two">
@@ -69,6 +76,36 @@ export function PatternsView() {
               <div key={e} className="hbar acc"><span>{e[0].toUpperCase() + e.slice(1)} energy</span><span className="track"><i style={{ width: `${s.byEnergy[e] ?? 0}%` }} /></span><span className="n">{s.byEnergy[e] == null ? "—" : `${s.byEnergy[e]}%`}</span></div>
             ))}
           </div>
+        </div>
+      </div>
+      <div className="two">
+        <div className="card">
+          <h2>Where the time went instead</h2>
+          <div className="bars">
+            {Object.entries(s.instead).sort((a, b) => b[1] - a[1]).map(([k, n]) => (
+              <div key={k} className="hbar wide"><span>{INSTEAD_LABEL[k as InsteadKey]}</span><span className="track"><i style={{ width: `${(n / imax) * 100}%`, background: "var(--muted)" }} /></span><span className="n">{fmtDur(n)}</span></div>
+            ))}
+            {!Object.keys(s.instead).length && <div className="muted small">When a block is missed or partly done, log what you did instead. It shows up here.</div>}
+          </div>
+          {s.drift != null && <div className="hint">Halfway check-ins: off track {s.drift}% of {s.checks}.</div>}
+        </div>
+        <div className="card">
+          <h2>Time estimates</h2>
+          {s.estimates.length ? (
+            <div className="tablewrap">
+              <table className="est">
+                <thead><tr><th>Block</th><th>Planned</th><th>Actual</th><th></th></tr></thead>
+                <tbody>
+                  {s.estimates.slice(0, 6).map((e) => (
+                    <tr key={e.title}>
+                      <td>{e.title}</td><td className="num">{e.planned} min</td><td className="num">{e.actual} min</td>
+                      <td>{e.ratio >= 1.2 ? <span className="chip warn">{e.ratio.toFixed(1)}× longer</span> : e.ratio <= 0.8 ? <span className="chip good">faster</span> : <span className="chip">on target</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <div className="muted small" style={{ marginTop: 8 }}>After you mark a block done, pick how long it really took. Averages show up here.</div>}
         </div>
       </div>
     </>

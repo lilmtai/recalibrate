@@ -1,20 +1,27 @@
-import type { CSSProperties } from "react";
+import { useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { useApp } from "../ctx";
-import { BARRIER_LABEL } from "../constants";
+import { BARRIER_LABEL, INSTEAD_LABEL } from "../constants";
 import type { Task } from "../types";
-import { addDays, fmt, fmtDur, norm, toMin, today } from "../lib/time";
-import { cuesFor, tasksFor } from "../lib/plan";
+import { addDays, DAY_SHORT, fmt, fmtDur, norm, nowMin, parseKey, toMin, today, uid, weekday } from "../lib/time";
+import { cuesFor, materialize, needsLog, notesFor, tasksFor, unplacedFor } from "../lib/plan";
 import { isWin, multiplier } from "../lib/stats";
-import { Timeline } from "./Timeline";
+import { HOUR, snap, Timeline } from "./Timeline";
+
+type TrayItem = { kind: "note" | "task"; id: string; title: string; dur: number };
+type Ghost = TrayItem & { x: number; y: number; moved: boolean };
 
 export function DayView({ reminders }: { reminders: { permission: string; enable: () => void } }) {
-  const { state, update, date, setDate, open, now } = useApp();
+  const { state, update, date, setDate, open, now, toast } = useApp();
   const isToday = date === today();
   const ci = state.checkins[date] || {};
   const tasks = tasksFor(state, date);
   const cues = cuesFor(state, date);
   const lowDay = ci.energy === "low" || (ci.sleep !== undefined && ci.sleep < 6);
   const hasEx = state.tasks.some((t) => t.ex) || state.routines.some((r) => r.ex);
+  const [reorg, setReorg] = useState(false);
+  const [selected, setSelected] = useState<TrayItem | null>(null);
+  const [ghost, setGhost] = useState<Ghost | null>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   const setCheckin = (patch: Partial<typeof ci>) =>
     update((s) => { s.checkins[date] = { ...(s.checkins[date] || {}), ...patch }; });
@@ -23,12 +30,81 @@ export function DayView({ reminders }: { reminders: { permission: string; enable
       s.tasks = s.tasks.filter((t) => !t.ex);
       s.routines = s.routines.filter((r) => !r.ex);
       s.rules = s.rules.filter((r) => !r.ex);
+      s.notes = s.notes.filter((n) => !n.ex);
       for (const k of Object.keys(s.checkins)) if (s.checkins[k].ex) delete s.checkins[k];
     });
+
+  // place a tray item (post-it or parked block) at a time on the day
+  const place = (item: TrayItem, minute: number) => {
+    const start = fmt(Math.min(1440 - item.dur, Math.max(0, snap(minute))));
+    update((s) => {
+      if (item.kind === "note") {
+        s.notes = s.notes.filter((n) => n.id !== item.id);
+        s.tasks.push({ id: uid(), date, title: item.title, start, dur: item.dur, category: "work", status: "open" });
+      } else {
+        const t = s.tasks.find((x) => x.id === item.id);
+        if (t) { t.start = start; t.unplaced = false; }
+      }
+    });
+    setSelected(null);
+    toast(`Placed “${item.title}” at ${start}.`);
+  };
+  const minuteAt = (clientX: number, clientY: number) => {
+    const inner = timelineRef.current;
+    const box = inner?.parentElement?.getBoundingClientRect();
+    if (!inner || !box || clientX < box.left || clientX > box.right || clientY < box.top || clientY > box.bottom) return null;
+    return ((clientY - inner.getBoundingClientRect().top) / HOUR) * 60;
+  };
+  const onSlot = (minute: number) => {
+    if (selected) place(selected, minute);
+    else open({ type: "block", date, start: fmt(minute) });
+  };
+
+  // dragging from the tray / post-its onto the timeline
+  const dragStart = (e: PointerEvent<HTMLElement>, item: TrayItem) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setGhost({ ...item, x: e.clientX, y: e.clientY, moved: false });
+  };
+  const dragMove = (e: PointerEvent<HTMLElement>) => {
+    if (!ghost) return;
+    const sc = timelineRef.current?.parentElement;
+    const r = sc?.getBoundingClientRect();
+    if (sc && r && e.clientX > r.left && e.clientX < r.right) {
+      if (e.clientY < r.top + 40 && e.clientY > r.top) sc.scrollTop -= 10;
+      else if (e.clientY > r.bottom - 40 && e.clientY < r.bottom) sc.scrollTop += 10;
+    }
+    const moved = ghost.moved || Math.hypot(e.clientX - ghost.x, e.clientY - ghost.y) > 6;
+    setGhost({ ...ghost, x: e.clientX, y: e.clientY, moved });
+  };
+  const dragEnd = (e: PointerEvent<HTMLElement>) => {
+    if (!ghost) return;
+    const g = ghost;
+    setGhost(null);
+    if (!g.moved) {
+      setSelected((cur) => (cur?.id === g.id ? null : g));
+      return;
+    }
+    const m = minuteAt(e.clientX, e.clientY);
+    if (m !== null) place(g, m - g.dur / 2);
+  };
+  const drag = { start: dragStart, move: dragMove, end: dragEnd };
+
+  const clearRest = () => {
+    const from = isToday ? nowMin() : -1;
+    let n = 0;
+    update((s) => {
+      for (const t of tasksFor(s, date)) {
+        if (t.status === "open" && toMin(t.start) >= from) { materialize(s, t).unplaced = true; n++; }
+      }
+    });
+    toast(n ? `${n} block${n > 1 ? "s" : ""} moved to the tray. Drag them back where they fit.` : "No open blocks left to move.");
+  };
 
   // "never miss twice": same block missed the day before
   const missedYesterday = state.tasks.filter((t) => t.date === addDays(date, -1) && t.status === "missed");
   const repeat = missedYesterday.find((m) => tasks.some((t) => norm(t.title) === norm(m.title)));
+  const toLog = date <= today() ? tasks.filter((t) => needsLog(t, date, today(), now)) : [];
+  const tray = unplacedFor(state, date);
 
   return (
     <>
@@ -56,50 +132,160 @@ export function DayView({ reminders }: { reminders: { permission: string; enable
         )}
       </section>
 
-      {repeat ? (
+      {toLog.length > 0 ? (
+        <div className="banner">
+          <b>{toLog.length} block{toLog.length > 1 ? "s" : ""} ended without a log.</b>
+          <span>Logging what really happened takes a few seconds and shows where your time goes.</span>
+          <button className="btn small" onClick={() => open({ type: "log", task: toLog[0] })}>Log “{toLog[0].title}”</button>
+        </div>
+      ) : repeat ? (
         <div className="banner"><b>Never miss twice.</b><span>You missed “{repeat.title}” yesterday{repeat.barrier && ` (${BARRIER_LABEL[repeat.barrier].toLowerCase()})`}. Today, even the “if not” version counts.</span></div>
       ) : lowDay ? (
         <div className="banner calm"><b>Low-fuel day.</b><span>High-energy blocks are dimmed. Do their “if not” versions and protect one win.</span></div>
       ) : null}
 
-      {!tasks.length ? (
-        <div className="card empty" style={{ marginTop: 20 }}>
-          <div className="what">Nothing planned{isToday ? " yet" : " for this day"}</div>
-          <div>Add the few blocks that matter. When something doesn't happen, log why and set a fix so next time goes better.</div>
-          <div className="row center">
-            <button className="btn primary" onClick={() => open({ type: "block", date })}>Add a block</button>
-            <button className="btn" onClick={() => open({ type: "routine" })}>Add a routine</button>
+      <div className="grid">
+        <section>
+          <div className="sechead">
+            <h2>{parseKey(date).toLocaleDateString(undefined, { weekday: "long" })}</h2>
+            <div className="row tight">
+              <button className={`btn small ${reorg ? "primary" : ""}`} onClick={() => { setReorg(!reorg); setSelected(null); }}>
+                {reorg ? "Done reorganizing" : "Reorganize"}
+              </button>
+              {!reorg && <button className="btn primary small" onClick={() => open({ type: "block", date })}>Add block</button>}
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="grid">
-          <section>
-            <div className="sechead"><h2>Day</h2><button className="btn primary small" onClick={() => open({ type: "block", date })}>Add block</button></div>
-            <Timeline tasks={tasks} cues={cues} lowDay={lowDay} isToday={isToday} />
-          </section>
-          <aside className="side">
-            {isToday && <NowCard tasks={tasks} now={now} />}
-            <CuesCard cues={cues} now={isToday ? now : -1} />
-            <DayScore tasks={tasks} />
-          </aside>
-        </div>
+          {reorg && (
+            <div className="banner calm reorgbar">
+              <span>Drag a block to move it. Drag its bottom edge to change the length. <b>↥</b> sends it to the tray.</span>
+              <button className="btn small" onClick={clearRest}>{isToday ? "Clear the rest of today" : "Clear the whole day"}</button>
+            </div>
+          )}
+          {selected && <div className="hint placing">Tap a time on the day to place “{selected.title}”. <button className="linkbtn" onClick={() => setSelected(null)}>Cancel</button></div>}
+          <Timeline ref={timelineRef} tasks={tasks} cues={cues} lowDay={lowDay} isToday={isToday} reorg={reorg} onSlot={onSlot} />
+          {!tasks.length && !reorg && (
+            <div className="hint">Nothing on the timeline yet. Tap any time to add a block, or add a routine from the Routines tab.</div>
+          )}
+        </section>
+        <aside className="side">
+          {isToday && <NowCard tasks={tasks} now={now} />}
+          <TodoCard date={date} isToday={isToday} tray={tray} drag={drag} selected={selected} />
+          <CuesCard cues={cues} now={isToday ? now : -1} />
+          <DayScore tasks={tasks} />
+        </aside>
+      </div>
+
+      {ghost?.moved && (
+        <div className="dragghost" style={{ left: ghost.x, top: ghost.y }}>{ghost.title} · {ghost.dur} min</div>
       )}
     </>
   );
 }
 
+function TodoCard({ date, isToday, tray, drag, selected }: {
+  date: string; isToday: boolean; tray: Task[]; selected: TrayItem | null;
+  drag: { start: (e: PointerEvent<HTMLElement>, i: TrayItem) => void; move: (e: PointerEvent<HTMLElement>) => void; end: (e: PointerEvent<HTMLElement>) => void };
+}) {
+  const { state, update, open } = useApp();
+  const [text, setText] = useState("");
+  const notes = notesFor(state, date, isToday);
+  const add = () => {
+    const t = text.trim();
+    if (!t) return;
+    update((s) => { s.notes.push({ id: uid(), date, text: t, done: false }); });
+    setText("");
+  };
+  const toggle = (id: string) =>
+    update((s) => { const n = s.notes.find((x) => x.id === id)!; n.done = !n.done; n.doneDate = n.done ? today() : undefined; });
+  const remove = (id: string) => update((s) => { s.notes = s.notes.filter((x) => x.id !== id); });
+  const nudge = (id: string, by: number) =>
+    update((s) => { const t = s.tasks.find((x) => x.id === id)!; t.dur = Math.max(15, t.dur + by); });
+  const handle = (item: TrayItem) => ({
+    onPointerDown: (e: PointerEvent<HTMLElement>) => drag.start(e, item),
+    onPointerMove: drag.move,
+    onPointerUp: drag.end,
+  });
+
+  return (
+    <div className="card postit">
+      <div className="sechead"><h2>To do {isToday ? "today" : DAY_SHORT[weekday(date)]}</h2><span className="small muted">{notes.filter((n) => !n.done).length} open</span></div>
+      <div className="addnote">
+        <input id="note-new" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()}
+          placeholder="Add a to-do… (Enter)" aria-label="New to-do" />
+      </div>
+      <ul className="notes">
+        {notes.map((n) => (
+          <li key={n.id} className={`${n.done ? "done" : ""} ${selected?.id === n.id ? "sel" : ""}`}>
+            <input type="checkbox" checked={n.done} onChange={() => toggle(n.id)} aria-label={`Done: ${n.text}`} />
+            <span className="grow">{n.text}{n.date < date && !n.done && <span className="chip">since {DAY_SHORT[weekday(n.date)]}</span>}</span>
+            {!n.done && (
+              <>
+                <button className="iconbtn" title="Give it a time" aria-label="Give it a time"
+                  onClick={() => open({ type: "block", date, title: n.text, fromNote: n.id })}>⏱</button>
+                <span className="grip" title="Drag onto the day, or tap then tap a time" {...handle({ kind: "note", id: n.id, title: n.text, dur: 30 })}>⋮⋮</span>
+              </>
+            )}
+            {n.done && <button className="iconbtn" aria-label="Remove" onClick={() => remove(n.id)}>×</button>}
+          </li>
+        ))}
+      </ul>
+      {!notes.length && <div className="small muted">Quick things with no set time. Drag one onto the day when you're ready to do it.</div>}
+
+      {tray.length > 0 && (
+        <>
+          <h2 style={{ marginTop: 16 }}>Tray · drag back onto the day</h2>
+          <ul className="notes tray">
+            {tray.map((t) => (
+              <li key={t.id} className={selected?.id === t.id ? "sel" : ""} style={{ "--c": `var(--c-${t.category})` } as CSSProperties}>
+                <span className="swatch" />
+                <span className="grow">{t.routineId && <span className="rt">↻</span>}{t.title}</span>
+                <span className="durctl">
+                  <button className="iconbtn" aria-label="15 minutes shorter" onClick={() => nudge(t.id, -15)}>−</button>
+                  <span className="time">{fmtDur(t.dur)}</span>
+                  <button className="iconbtn" aria-label="15 minutes longer" onClick={() => nudge(t.id, 15)}>+</button>
+                </span>
+                <span className="grip" title="Drag onto the day, or tap then tap a time" {...handle({ kind: "task", id: t.id, title: t.title, dur: t.dur })}>⋮⋮</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
 function NowCard({ tasks, now }: { tasks: Task[]; now: number }) {
-  const { open } = useApp();
+  const { open, update, toast } = useApp();
   const openTasks = tasks.filter((t) => t.status === "open");
   const cur = openTasks.find((t) => toMin(t.start) <= now && now < toMin(t.start) + t.dur);
   const next = openTasks.find((t) => toMin(t.start) > now);
   if (cur) {
     const p = Math.round(((now - toMin(cur.start)) / cur.dur) * 100);
+    const last = cur.checks?.[cur.checks.length - 1];
+    const onIt = () => {
+      update((s) => { const t = materialize(s, cur); (t.checks ||= []).push({ at: now, on: true }); });
+      toast("Nice. Keep going.");
+    };
     return (
       <div className="card now" style={{ "--c": `var(--c-${cur.category})` } as CSSProperties}>
         <h2>Now</h2><div className="what">{cur.title}</div>
         <div className="bar"><i style={{ width: `${p}%` }} /></div>
         <div className="when">{toMin(cur.start) + cur.dur - now} min left · ends {fmt(toMin(cur.start) + cur.dur)}</div>
+        {!last && p >= 40 && (
+          <div className="checkin-q">
+            <span>Halfway check: still on it?</span>
+            <div className="row tight">
+              <button className="btn small" onClick={onIt}>On it</button>
+              <button className="btn small" onClick={() => open({ type: "check", task: cur })}>Doing something else</button>
+            </div>
+          </div>
+        )}
+        {last && !last.on && (
+          <div className="small muted" style={{ marginTop: 10 }}>
+            Checked in at {fmt(last.at)}: {(last.what || []).map((k) => INSTEAD_LABEL[k].toLowerCase()).join(", ") || "off track"}.
+            {cur.ifNot && <> Back on track with the “if not” version: {cur.ifNot}.</>}
+          </div>
+        )}
         {next && <div className="small muted" style={{ marginTop: 10 }}>Next: {next.title} at {next.start}</div>}
         <div className="actions"><button className="btn small" onClick={() => open({ type: "log", task: cur })}>Log it</button></div>
       </div>
@@ -113,6 +299,12 @@ function NowCard({ tasks, now }: { tasks: Task[]; now: number }) {
         {gap <= 10 && <div className="banner calm" style={{ marginTop: 12 }}><b>Transition.</b><span>Wrap up and stand up now.</span></div>}
         {next.ifNot && <div className="small muted" style={{ marginTop: 10 }}>If not: {next.ifNot}</div>}
       </div>
+    );
+  }
+  if (!tasks.length) {
+    return (
+      <div className="card now"><h2>Now</h2><div className="what">Open time</div>
+        <div className="small muted">Nothing planned. Tap a time on the day to add a block, or drag a to-do onto it.</div></div>
     );
   }
   return (

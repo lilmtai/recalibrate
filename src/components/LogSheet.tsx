@@ -1,12 +1,12 @@
 import { useApp } from "../ctx";
-import { CAT_LABEL, ENERGY_LABEL } from "../constants";
+import { CAT_LABEL, ENERGY_LABEL, INSTEAD_LABEL } from "../constants";
 import type { Task } from "../types";
 import { addDays, fmt, toMin, uid } from "../lib/time";
 import { materialize, remindLabel, rulesFor } from "../lib/plan";
 import { scoreRules } from "../lib/actions";
 import { Sheet } from "./Sheet";
 
-const STATUS_LABEL = { done: "done", ifnot: "'if not' version", missed: "missed", open: "", skipped: "" };
+const STATUS_LABEL = { done: "done", partial: "partly done", ifnot: "'if not' version", missed: "missed", open: "", skipped: "" };
 
 export function LogSheet({ task }: { task: Task }) {
   const { state, update, open, close, toast } = useApp();
@@ -38,6 +38,8 @@ export function LogSheet({ task }: { task: Task }) {
       t.status = "open";
       t.barrier = undefined;
       t.actual = undefined;
+      t.instead = undefined;
+      t.share = undefined;
     });
     close();
   };
@@ -53,9 +55,13 @@ export function LogSheet({ task }: { task: Task }) {
           <span>{rules.map((r) => `${r.fix} (${remindLabel(r.remind)})`).join("; ")}</span>
         </div>
       )}
+      {task.instead && task.instead.what.length > 0 && (
+        <div className="hint">Time went to: {task.instead.what.map((k) => INSTEAD_LABEL[k].toLowerCase()).join(", ")}{task.instead.note ? ` (${task.instead.note})` : ""}</div>
+      )}
       <div className="field">How did it go?</div>
       <div className="fixes">
         <button className="pick" onClick={() => mark("done")}>Done</button>
+        <button className="pick" onClick={() => open({ type: "miss", task, partial: true })}>Partly done</button>
         <button className="pick" onClick={() => mark("ifnot")}>Did the "if not" version{task.ifNot ? `: ${task.ifNot}` : ""}</button>
         <button className="pick" onClick={() => open({ type: "miss", task })}>Didn't happen</button>
       </div>

@@ -25,9 +25,12 @@ export function loadExample(s: State) {
   days.forEach(([d]) => {
     const wd = weekday(addDays(T, d));
     const dp = deepOut[d], g = gymOut[d];
-    if (wd < 5) s.tasks.push(mk(d, "Deep work: Q4 strategy", "09:00", 90, "work", "high", "25 min outline only", dp[0], { routineId: deep, ...(dp[0] === "done" ? { actual: dp[1] as number } : { barrier: dp[1] as never }) }));
-    if (wd < 6) s.tasks.push(mk(d, "Gym", "18:00", 60, "health", "high", "20-minute walk", g[0], { routineId: gymId, ...(g[1] ? { barrier: g[1] as never } : {}) }));
-    s.tasks.push(mk(d, "Inbox + admin", "14:00", 45, "work", "med", "Reply to the 3 most urgent", d === -3 ? "missed" : "done", d === -3 ? { barrier: "time" } : { actual: 60 }));
+    if (wd < 5) s.tasks.push(mk(d, "Deep work: Q4 strategy", "09:00", 90, "work", "high", "25 min outline only", dp[0], { routineId: deep, ...(dp[0] === "done" ? { actual: dp[1] as number, checks: [{ at: 585, on: d !== -4 }] } : { barrier: dp[1] as never, instead: { what: dp[1] === "overwhelm" ? ["otherwork", "phone"] : ["urgent"] } }) }));
+    if (wd < 6) s.tasks.push(mk(d, "Gym", "18:00", 60, "health", "high", "20-minute walk", g[0], { routineId: gymId, ...(g[1] ? { barrier: g[1] as never, instead: { what: g[1] === "energy" ? ["rest", "phone"] : ["food", "phone"] } } : {}) }));
+    s.tasks.push(mk(d, "Inbox + admin", "14:00", 45, "work", "med", "Reply to the 3 most urgent",
+      d === -3 ? "missed" : d === -5 ? "partial" : "done",
+      d === -3 ? { barrier: "time", instead: { what: ["hyperfocus"], note: "kept polishing the deck" } }
+        : d === -5 ? { share: 0.5, instead: { what: ["people"] } } : { actual: 60 }));
     if (d === -4 || d === -1) s.tasks.push(mk(d, "Dinner with Sam", "19:30", 90, "social", undefined, "Call instead", d === -4 ? "missed" : "done", d === -4 ? { barrier: "energy" } : {}));
     if (d === -5 || d === -3) s.tasks.push(mk(d, "Newsletter draft", "20:00", 60, "side", "med", "Write the headline", d === -5 ? "missed" : "done", d === -5 ? { barrier: "avoid" } : { actual: 75 }));
   });
@@ -37,6 +40,13 @@ export function loadExample(s: State) {
     { id: uid(), ex: true, match: "gym", barrier: "bloated", fix: "Keep lunch light on gym days", remind: { kind: "before", lead: 240 }, created: addDays(T, -1), wins: 0, fails: 0 },
     { id: uid(), ex: true, match: "deep work", barrier: "overwhelm", fix: "Write the first 2-minute step", remind: { kind: "at", time: "21:00", dayBefore: true }, created: addDays(T, -4), wins: 2, fails: 1 },
     { id: uid(), ex: true, match: "gym", barrier: "forgot", fix: "Set an alarm for tomorrow", remind: { kind: "at", time: "21:00", dayBefore: true }, created: T, wins: 0, fails: 0 },
+  );
+
+  s.notes.push(
+    { id: uid(), date: addDays(T, -1), text: "Book dentist", done: false, ex: true },
+    { id: uid(), date: T, text: "Reply to Jonas about the offer", done: false, ex: true },
+    { id: uid(), date: T, text: "Buy protein bars", done: false, ex: true },
+    { id: uid(), date: T, text: "Renew gym membership", done: true, doneDate: T, ex: true },
   );
 
   s.tasks.push(

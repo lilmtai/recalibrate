@@ -1,4 +1,4 @@
-import type { BarrierKey, CategoryKey, Energy, Remind } from "./types";
+import type { BarrierKey, CategoryKey, Energy, InsteadKey, Remind } from "./types";
 
 export const CATEGORIES: { key: CategoryKey; label: string }[] = [
   { key: "work", label: "Main work" },
@@ -68,3 +68,18 @@ export const SUGGESTED_FIXES: Record<BarrierKey, { fix: string; remind: Remind }
 };
 
 export const LEADS = [5, 10, 15, 30, 45, 60, 90, 120, 180, 240];
+
+/** One-tap answers to "what did you do instead?" */
+export const INSTEAD: { key: InsteadKey; label: string }[] = [
+  { key: "phone", label: "Phone / scrolling" },
+  { key: "otherwork", label: "Other work" },
+  { key: "urgent", label: "Urgent request" },
+  { key: "hyperfocus", label: "Hyperfocus on something else" },
+  { key: "people", label: "Talking to someone" },
+  { key: "chores", label: "Chores / errands" },
+  { key: "food", label: "Eating" },
+  { key: "rest", label: "Rest / nap" },
+  { key: "late", label: "Running late" },
+  { key: "unknown", label: "Can't remember" },
+];
+export const INSTEAD_LABEL = Object.fromEntries(INSTEAD.map((i) => [i.key, i.label])) as Record<InsteadKey, string>;

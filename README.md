@@ -12,11 +12,15 @@ npm run build    # production build in dist/
 
 ## What's in it
 
-- **Day**: timeline coloured by area (Main work, Health, Social, Side hustle, Me time), energy/sleep check-in, "Now" card, reminders, "never miss twice" banner. Click an empty slot to add a block there.
+- **Day**: full 24-hour timeline coloured by area (Main work, Health, Social, Side hustle, Me time), energy/sleep check-in, "Now" card, reminders, "never miss twice" banner. Click an empty slot to add a block there.
+- **To do today (post-its)**: quick to-dos with no time. Unfinished ones roll over to the next day. Drag one onto the timeline (or tap it, then tap a time) to schedule it.
+- **Reorganize**: drag blocks to move them, drag the bottom edge to change length, send blocks to a tray (or "Clear the rest of today") and drag them back where they fit.
+- **Log what really happened**: Done / Partly done / "If not" version / Didn't happen. For partial or missed blocks, one tap logs what filled the time instead (phone, other work, hyperfocus, people…).
+- **Check-ins**: a halfway "still on it?" prompt and an end-of-block "log it" prompt (in-app, and as notifications when allowed). Blocks that ended without a log are listed at the top of the day.
 - **Week**: plan Monday–Sunday, see hours per area, copy last week's blocks.
 - **Routines**: sticky blocks that repeat on chosen weekdays (training, deep work, wind-down).
 - **Playbook**: the if-then rules you created from misses, with a "worked X of Y" score.
-- **Patterns**: follow-through by area, energy and sleep, top barriers, time-estimate multiplier.
+- **Patterns**: follow-through by area, energy and sleep, top barriers, where the time went instead, planned vs. actual time per block, halfway drift, time-estimate multiplier.
 
 Blocks take a start time plus an optional finish time or duration (fill one, the other follows), an optional energy level, and an "If not…" fallback for bad days.
 

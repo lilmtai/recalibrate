@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Ctx, type SheetState, type Tab } from "./ctx";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Ctx, type SheetState, type Tab, type ToastAction } from "./ctx";
+import type { Cue } from "./types";
+import { tasksFor } from "./lib/plan";
 import { useAppState } from "./store";
 import { useReminders } from "./useReminders";
 import { longDate, nowMin, today } from "./lib/time";
@@ -11,7 +13,7 @@ import { PlaybookView } from "./components/PlaybookView";
 import { PatternsView } from "./components/PatternsView";
 import { BlockSheet } from "./components/BlockSheet";
 import { ActualSheet, LogSheet } from "./components/LogSheet";
-import { MissSheet } from "./components/MissSheet";
+import { CheckSheet, MissSheet } from "./components/MissSheet";
 import { AccountSheet, STATUS_LABEL } from "./components/AccountSheet";
 import { useSync } from "./sync";
 
@@ -29,7 +31,9 @@ export default function App() {
   const [tab, setTab] = useState<Tab>(() => (localStorage.getItem("recalibrate.tab") as Tab) || "day");
   const [date, setDate] = useState(today());
   const [sheet, setSheet] = useState<SheetState>(null);
-  const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
+  const [toasts, setToasts] = useState<{ id: number; msg: string; action?: ToastAction }[]>([]);
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const [now, setNow] = useState(nowMin());
 
   useEffect(() => {
@@ -38,13 +42,22 @@ export default function App() {
   }, []);
   useEffect(() => { try { localStorage.setItem("recalibrate.tab", tab); } catch { /* ignore */ } }, [tab]);
 
-  const toast = useCallback((msg: string) => {
+  const toast = useCallback((msg: string, action?: ToastAction) => {
     const id = Date.now() + Math.random();
-    setToasts((t) => [...t, { id, msg }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
+    setToasts((t) => [...t, { id, msg, action }]);
+    // prompts with a button stay longer so there's time to tap them
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), action ? 20_000 : 4000);
   }, []);
   const close = useCallback(() => setSheet(null), []);
-  const reminders = useReminders(state, now, toast);
+  // halfway → check-in panel, end of block → log panel
+  const onCue = useCallback((c: Cue) => {
+    const t = tasksFor(stateRef.current, today()).find((x) => x.id === c.taskId);
+    if (!t || t.status !== "open") return;
+    setTab("day");
+    setDate(today());
+    setSheet(c.kind === "mid" ? { type: "check", task: t } : { type: "log", task: t });
+  }, []);
+  const reminders = useReminders(state, now, toast, onCue);
 
   const ctx = useMemo(() => ({ state, update, date, setDate, setTab, open: setSheet, close, toast, now }), [state, update, date, close, toast, now]);
   const empty = !state.tasks.length && !state.routines.length;
@@ -92,16 +105,24 @@ export default function App() {
         </main>
       </div>
 
-      {sheet?.type === "block" && <BlockSheet key={sheet.task?.id || "new"} date={sheet.date} task={sheet.task} start={sheet.start} />}
+      {sheet?.type === "block" && <BlockSheet key={sheet.task?.id || "new"} date={sheet.date} task={sheet.task} start={sheet.start} title={sheet.title} fromNote={sheet.fromNote} />}
       {sheet?.type === "routine" && <BlockSheet routine={sheet.routine} routineMode />}
       {sheet?.type === "log" && <LogSheet task={sheet.task} />}
       {sheet?.type === "actual" && <ActualSheet taskId={sheet.taskId} planned={sheet.planned} />}
-      {sheet?.type === "miss" && <MissSheet task={sheet.task} />}
+      {sheet?.type === "miss" && <MissSheet key={sheet.task.id + String(sheet.partial)} task={sheet.task} partial={sheet.partial} />}
+      {sheet?.type === "check" && <CheckSheet task={sheet.task} />}
       {sheet?.type === "rule" && <MissSheet rule={sheet.rule} />}
       {sheet?.type === "account" && <AccountSheet sync={sync} />}
 
       <div className="toasts" aria-live="polite">
-        {toasts.map((t) => <div key={t.id} className="toast">{t.msg}</div>)}
+        {toasts.map((t) => (
+          <div key={t.id} className="toast">
+            <span>{t.msg}</span>
+            {t.action && (
+              <button className="toastbtn" onClick={() => { t.action!.run(); setToasts((x) => x.filter((y) => y.id !== t.id)); }}>{t.action.label}</button>
+            )}
+          </div>
+        ))}
       </div>
     </Ctx.Provider>
   );
