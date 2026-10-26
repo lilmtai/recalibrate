@@ -12,6 +12,8 @@ import { PatternsView } from "./components/PatternsView";
 import { BlockSheet } from "./components/BlockSheet";
 import { ActualSheet, LogSheet } from "./components/LogSheet";
 import { MissSheet } from "./components/MissSheet";
+import { AccountSheet, STATUS_LABEL } from "./components/AccountSheet";
+import { useSync } from "./sync";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "day", label: "Day" },
@@ -22,7 +24,8 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 export default function App() {
-  const { state, update } = useAppState();
+  const { state, update, replace } = useAppState();
+  const sync = useSync(state, replace);
   const [tab, setTab] = useState<Tab>(() => (localStorage.getItem("recalibrate.tab") as Tab) || "day");
   const [date, setDate] = useState(today());
   const [sheet, setSheet] = useState<SheetState>(null);
@@ -58,7 +61,12 @@ export default function App() {
       <div className="wrap">
         <header className="top">
           <div>
-            <div className="brand">Recalibrate</div>
+            <div className="brand">
+              Recalibrate
+              <button className={`syncbtn s-${sync.status}`} onClick={() => setSheet({ type: "account" })}>
+                <span className="dot" />{sync.email ? STATUS_LABEL[sync.status] : "Sign in to sync"}
+              </button>
+            </div>
             <h1>{title}</h1>
           </div>
           <nav className="tabs" role="tablist">
@@ -90,6 +98,7 @@ export default function App() {
       {sheet?.type === "actual" && <ActualSheet taskId={sheet.taskId} planned={sheet.planned} />}
       {sheet?.type === "miss" && <MissSheet task={sheet.task} />}
       {sheet?.type === "rule" && <MissSheet rule={sheet.rule} />}
+      {sheet?.type === "account" && <AccountSheet sync={sync} />}
 
       <div className="toasts" aria-live="polite">
         {toasts.map((t) => <div key={t.id} className="toast">{t.msg}</div>)}

@@ -29,6 +29,7 @@ src/
   App.tsx              tabs, pop-up panels, toasts
   ctx.ts               shared app context
   store.ts             localStorage save/load + migration from the first version
+  sync.ts              Supabase sign-in and sync
   types.ts             data model
   constants.ts         categories, barriers, suggested fixes
   useReminders.ts      in-app + browser notifications while the app is open
@@ -37,13 +38,30 @@ src/
   components/          views and forms
 ```
 
-## Data
+## Live app
 
-Saved in the browser (localStorage). Reminders fire only while the app is open in a tab.
+Every push to `main` builds and publishes to https://lilmtai.github.io/recalibrate/ (workflow in `.github/workflows/deploy.yml`).
+One-time setup: repo Settings → Pages → Source: **GitHub Actions**.
+
+## Data and sync
+
+The app is local-first: it always saves in the browser (localStorage) and works offline.
+Signing in (email link, no password) syncs the planner to Supabase so phone and laptop share it.
+
+- `src/sync.ts` pulls on sign-in, on tab focus and every minute, and pushes edits after ~1 s.
+  If two devices both changed things, the planners are merged (nothing is dropped).
+- `src/lib/supabase.ts` holds the project URL and publishable key (safe to be public).
+  Override with `VITE_SUPABASE_URL` / `VITE_SUPABASE_KEY` in `.env.local`.
+
+One-time Supabase setup:
+1. SQL Editor → run `supabase/schema.sql` (creates the table and row-level security).
+2. Authentication → URL Configuration: Site URL `https://lilmtai.github.io/recalibrate/`,
+   and add Redirect URLs `https://lilmtai.github.io/recalibrate/**` and `http://localhost:5173/**`.
+
+Reminders fire only while the app is open in a tab.
 
 ## Next steps
 
-1. Accounts + sync across devices (Supabase).
-2. Installable PWA with push notifications, so reminders work when the app is closed.
-3. Focus timer.
-4. AI coach via a serverless function calling the Claude API.
+1. Installable PWA with push notifications, so reminders work when the app is closed.
+2. Focus timer.
+3. AI coach via a Supabase Edge Function calling the Claude API.

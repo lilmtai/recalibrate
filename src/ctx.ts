@@ -8,6 +8,7 @@ export type SheetState =
   | { type: "actual"; taskId: string; planned: number }
   | { type: "miss"; task: Task }
   | { type: "rule"; rule: Rule }
+  | { type: "account" }
   | null;
 
 export type Tab = "day" | "week" | "routines" | "playbook" | "patterns";

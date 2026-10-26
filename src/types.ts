@@ -64,6 +64,8 @@ export interface State {
   routines: Routine[];
   rules: Rule[];
   checkins: Record<string, CheckIn>;
+  /** ms timestamp of the last local edit, used for sync */
+  updatedAt?: number;
 }
 
 export interface Cue {

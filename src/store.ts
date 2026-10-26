@@ -6,7 +6,7 @@ export const blank = (): State => ({ v: 2, tasks: [], routines: [], rules: [], c
 
 /** Upgrades data saved by the first single-file version. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function migrate(raw: any): State {
+export function migrate(raw: any): State {
   const s = { ...blank(), ...raw };
   s.tasks = (s.tasks || []).map((t: any) => ({
     ...t,
@@ -50,8 +50,11 @@ export function useAppState() {
     setState((prev) => {
       const draft = structuredClone(prev);
       fn(draft);
+      draft.updatedAt = Date.now();
       return draft;
     });
   }, []);
-  return { state, update };
+  /** Swap in a whole state (from sync) without marking it as a local edit. */
+  const replace = useCallback((next: State) => setState(migrate(next)), []);
+  return { state, update, replace };
 }

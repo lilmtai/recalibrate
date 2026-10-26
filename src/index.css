@@ -201,3 +201,11 @@ h2 { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: u
   .sheet { animation: up .18s ease-out; }
   @keyframes up { from { transform: translateY(12px); opacity: .6; } }
 }
+
+/* sync status in the header */
+.syncbtn { border: 0; background: none; margin-left: 10px; padding: 2px 6px; border-radius: 6px; font: inherit; font-size: 11px; letter-spacing: .06em; color: var(--faint); text-transform: none; display: inline-flex; align-items: center; gap: 6px; }
+.syncbtn:hover { color: var(--muted); background: var(--sunk); }
+.syncbtn .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+.syncbtn.s-synced .dot { background: var(--good); }
+.syncbtn.s-syncing .dot { background: var(--accent); }
+.syncbtn.s-error .dot, .syncbtn.s-offline .dot { background: var(--warn); }
