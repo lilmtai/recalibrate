@@ -108,6 +108,15 @@ export interface Actual {
   ex?: boolean;
 }
 
+/** Which notifications to send when the app is closed (synced across devices). */
+export interface NotifyPrefs {
+  enabled: boolean;
+  start: boolean; // 5 minutes before a block
+  mid: boolean; // halfway "still on it?"
+  end: boolean; // "log what happened"
+  fix: boolean; // reminders from your fixes
+}
+
 export interface State {
   v: 2;
   tasks: Task[];
@@ -116,6 +125,7 @@ export interface State {
   checkins: Record<string, CheckIn>;
   notes: Note[];
   actuals: Actual[];
+  notify?: NotifyPrefs;
   /** ms timestamp of the last local edit, used for sync */
   updatedAt?: number;
 }

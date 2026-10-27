@@ -14,6 +14,8 @@ export function useReminders(
   now: number,
   toast: (m: string, a?: ToastAction) => void,
   onCue: (c: Cue) => void,
+  /** false when push notifications already cover this device, to avoid doubles */
+  systemNotify = true,
 ) {
   const fired = useRef<Set<string>>(new Set());
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">(
@@ -38,7 +40,7 @@ export function useReminders(
         : c.kind === "end" ? { label: "Log it", run: () => onCue(c) }
         : undefined;
       toast(msg, action);
-      if (permission === "granted") {
+      if (permission === "granted" && systemNotify) {
         try {
           const n = new Notification("Recalibrate", { body: msg, tag: id });
           n.onclick = () => { window.focus(); if (action) action.run(); n.close(); };
@@ -46,7 +48,7 @@ export function useReminders(
       }
     }
     try { localStorage.setItem(storeKey, JSON.stringify([...fired.current].filter((k) => k.startsWith(d)))); } catch { /* ignore */ }
-  }, [state, now, permission, toast, onCue]);
+  }, [state, now, permission, toast, onCue, systemNotify]);
 
   const enable = async () => {
     if (typeof Notification === "undefined") return;

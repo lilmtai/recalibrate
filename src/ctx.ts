@@ -11,6 +11,7 @@ export type SheetState =
   | { type: "note"; noteId: string }
   | { type: "rule"; rule: Rule }
   | { type: "account" }
+  | { type: "setup" }
   | { type: "entry"; date: string; entry?: Actual; start?: number; end?: number }
   | null;
 

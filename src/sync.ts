@@ -29,6 +29,7 @@ export function merge(a: State, b: State): State {
     checkins: { ...older.checkins, ...newer.checkins },
     notes: byId(older.notes || [], newer.notes || []),
     actuals: byId(older.actuals || [], newer.actuals || []),
+    notify: newer.notify || older.notify,
     updatedAt: Date.now(),
   };
 }
@@ -145,5 +146,10 @@ export function useSync(state: State, replace: (s: State) => void) {
     try { localStorage.removeItem(META); } catch { /* ignore */ }
   };
 
-  return { email: session?.user.email || null, status, signIn, signOut, syncNow: pull };
+  const verifyCode = async (email: string, code: string) => {
+    const { error } = await supabase.auth.verifyOtp({ email, token: code.replace(/\s/g, ""), type: "email" });
+    return error?.message || null;
+  };
+
+  return { email: session?.user.email || null, userId: userId || null, status, signIn, verifyCode, signOut, syncNow: pull };
 }

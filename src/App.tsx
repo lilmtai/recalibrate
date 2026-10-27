@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Ctx, type SheetState, type Tab, type ToastAction } from "./ctx";
 import type { Cue } from "./types";
-import { tasksFor } from "./lib/plan";
+import { materialize, tasksFor } from "./lib/plan";
 import { useAppState } from "./store";
 import { useReminders } from "./useReminders";
 import { longDate, nowMin, today } from "./lib/time";
@@ -18,6 +18,8 @@ import { ActualSheet, LogSheet } from "./components/LogSheet";
 import { CheckSheet, MissSheet } from "./components/MissSheet";
 import { AccountSheet, STATUS_LABEL } from "./components/AccountSheet";
 import { useSync } from "./sync";
+import { SetupSheet } from "./components/SetupSheet";
+import { useInstall, usePush } from "./usePwa";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "day", label: "Day" },
@@ -35,6 +37,7 @@ export default function App() {
   const [date, setDate] = useState(today());
   const [sheet, setSheet] = useState<SheetState>(null);
   const [toasts, setToasts] = useState<{ id: number; msg: string; action?: ToastAction }[]>([]);
+  const started = useRef(Date.now());
   const stateRef = useRef(state);
   stateRef.current = state;
   const [now, setNow] = useState(nowMin());
@@ -60,7 +63,30 @@ export default function App() {
     setDate(today());
     setSheet(c.kind === "mid" ? { type: "check", task: t } : { type: "log", task: t });
   }, []);
-  const reminders = useReminders(state, now, toast, onCue);
+  const install = useInstall();
+  const push = usePush(sync.userId, state, update);
+  useReminders(state, now, toast, onCue, !push.subscribed);
+
+  // opened from a notification: ?task=…&date=…&do=on|check|log
+  const pendingLink = useRef<URLSearchParams | null>(new URLSearchParams(window.location.search));
+  useEffect(() => {
+    const q = pendingLink.current;
+    if (!q || (!q.get("do") && !q.get("date"))) { pendingLink.current = null; return; }
+    const d = q.get("date") || today();
+    const t = q.get("task") ? tasksFor(state, d).find((x) => x.id === q.get("task")) : undefined;
+    if (q.get("task") && !t && Date.now() - started.current < 10_000) return; // wait for sync to bring it in
+    pendingLink.current = null;
+    window.history.replaceState(null, "", window.location.pathname);
+    setTab("day");
+    setDate(d);
+    if (!t || t.status !== "open") return;
+    const act = q.get("do");
+    if (act === "on") {
+      update((s) => { const real = materialize(s, t); (real.checks ||= []).push({ at: nowMin(), on: true }); });
+      toast("Nice. Keep going.");
+    } else if (act === "check") setSheet({ type: "check", task: t });
+    else if (act === "log") setSheet({ type: "log", task: t });
+  }, [state, update, toast]);
 
   const ctx = useMemo(() => ({ state, update, date, setDate, setTab, open: setSheet, close, toast, now }), [state, update, date, close, toast, now]);
   const empty = !state.tasks.length && !state.routines.length;
@@ -83,6 +109,9 @@ export default function App() {
               <button className={`syncbtn s-${sync.status}`} onClick={() => setSheet({ type: "account" })}>
                 <span className="dot" />{sync.email ? STATUS_LABEL[sync.status] : "Sign in to sync"}
               </button>
+              <button className={`syncbtn ${push.subscribed ? "s-synced" : ""}`} onClick={() => setSheet({ type: "setup" })}>
+                <span className="dot" />{push.subscribed ? "Notifications on" : install.installed ? "Turn on notifications" : "Get the phone app"}
+              </button>
             </div>
             <h1>{title}</h1>
           </div>
@@ -101,7 +130,7 @@ export default function App() {
         )}
 
         <main>
-          {tab === "day" && <DayView reminders={reminders} />}
+          {tab === "day" && <DayView notificationsOn={push.subscribed} />}
           {tab === "myday" && <MyDayView />}
           {tab === "week" && <WeekView />}
           {tab === "routines" && <RoutinesView />}
@@ -118,6 +147,7 @@ export default function App() {
       {sheet?.type === "check" && <CheckSheet task={sheet.task} />}
       {sheet?.type === "rule" && <MissSheet rule={sheet.rule} />}
       {sheet?.type === "account" && <AccountSheet sync={sync} />}
+      {sheet?.type === "setup" && <SetupSheet install={install} push={push} signedIn={!!sync.email} email={sync.email} />}
       {sheet?.type === "entry" && <EntrySheet key={sheet.entry?.id || "new"} date={sheet.date} entry={sheet.entry} start={sheet.start} end={sheet.end} />}
 
       <div className="toasts" aria-live="polite">

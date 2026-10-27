@@ -11,7 +11,7 @@ import { HOUR, snap, Timeline } from "./Timeline";
 type TrayItem = { kind: "note" | "task"; id: string; title: string; dur: number };
 type Ghost = TrayItem & { x: number; y: number; moved: boolean };
 
-export function DayView({ reminders }: { reminders: { permission: string; enable: () => void } }) {
+export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
   const { state, update, date, setDate, open, now, toast } = useApp();
   const isToday = date === today();
   const ci = state.checkins[date] || {};
@@ -129,8 +129,8 @@ export function DayView({ reminders }: { reminders: { permission: string; enable
           <input className="sleep" id="sleep" type="number" min={0} max={14} step={0.5} placeholder="7"
             value={ci.sleep ?? ""} onChange={(e) => setCheckin({ sleep: e.target.value === "" ? undefined : +e.target.value })} />{" "}
           <span className="muted small">h</span></div>
-        {reminders.permission === "default" && (
-          <button className="btn small" onClick={reminders.enable}>Turn on reminders</button>
+        {!notificationsOn && (
+          <button className="btn small" onClick={() => open({ type: "setup" })}>Turn on reminders</button>
         )}
       </section>
 

@@ -35,6 +35,7 @@ src/
   ctx.ts               shared app context
   store.ts             localStorage save/load + migration from the first version
   sync.ts              Supabase sign-in and sync
+  usePwa.ts            install prompt + push subscription + reminder schedule upload
   types.ts             data model
   constants.ts         categories, barriers, suggested fixes
   useReminders.ts      in-app + browser notifications while the app is open
@@ -63,10 +64,27 @@ One-time Supabase setup:
 2. Authentication → URL Configuration: Site URL `https://lilmtai.github.io/recalibrate/`,
    and add Redirect URLs `https://lilmtai.github.io/recalibrate/**` and `http://localhost:5173/**`.
 
-Reminders fire only while the app is open in a tab.
+## Phone app and notifications
+
+The app is an installable PWA (`public/manifest.webmanifest`, `public/sw.js`): Home Screen icon, full-screen, works offline.
+Sign-in accepts the emailed code, so it works inside the installed app (add `{{ .Token }}` to the Supabase email templates).
+
+Notifications that arrive when the app is closed:
+
+1. Each device that turns on notifications saves a Web Push subscription (`push_subscriptions`).
+2. Whenever the plan changes, the app writes the next 7 days of reminders to `push_queue`
+   (5 min before a block, halfway check-in, end-of-block log prompt, fix reminders).
+3. `pg_cron` calls the `send-push` Edge Function every minute; it sends what's due with Web Push.
+4. Tapping a notification opens the right panel (`?task=…&do=log|check|on`).
+
+Setup: run `supabase/push.sql`, deploy `supabase/functions/send-push` with JWT verification off,
+and set its secrets `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET`.
+The VAPID public key is also in `src/lib/push.ts`. On iPhone, push needs iOS 16.4+ and the Home Screen app.
+
+While the app is open, the same reminders also show as in-app toasts.
 
 ## Next steps
 
-1. Installable PWA with push notifications, so reminders work when the app is closed.
-2. Focus timer.
+1. Focus timer.
+2. Weekly plan-vs-reality review.
 3. AI coach via a Supabase Edge Function calling the Claude API.

@@ -305,3 +305,17 @@ table.est .num { font-family: var(--mono); font-size: 12px; font-variant-numeric
 .entry.k-free { border-left-style: dotted; }
 .entry.running { box-shadow: 0 0 0 2px var(--accent); }
 @media (prefers-reduced-motion: no-preference) { .entry.running { animation: pulse 2s ease-in-out infinite; } @keyframes pulse { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent); } } }
+
+/* phone setup */
+.steps { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+.step { display: flex; gap: 12px; align-items: flex-start; }
+.step .steptitle { font-weight: 600; font-size: 15px; display: block; margin-bottom: 2px; }
+.step .small b { color: var(--fg); font-weight: 600; }
+.step .small { line-height: 1.5; }
+.step .btn { margin-top: 6px; }
+.stepn { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--sunk); color: var(--muted); font-family: var(--mono); font-size: 13px; }
+.step.done .stepn { background: var(--good-soft); color: var(--good); }
+.toggle.sub { margin-top: 8px; padding-left: 22px; align-items: flex-start; }
+.toggle.sub input { margin-top: 3px; }
+.codeinput { font-family: var(--mono); font-size: 22px !important; letter-spacing: .3em; text-align: center; }
+.brand { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 0; }
