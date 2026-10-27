@@ -10,7 +10,7 @@ import { Sheet } from "./Sheet";
 const STATUS_LABEL = { done: "done", partial: "partly done", ifnot: "'if not' version", missed: "missed", open: "", skipped: "" };
 
 export function LogSheet({ task }: { task: Task }) {
-  const { state, update, open, close, toast } = useApp();
+  const { state, update, open, close, toast, celebrate } = useApp();
   const rules = rulesFor(state, task.title);
 
   const mark = (status: "done" | "ifnot") => {
@@ -22,6 +22,7 @@ export function LogSheet({ task }: { task: Task }) {
       syncActuals(s, t);
       id = t.id;
     });
+    celebrate();
     if (status === "done") setTimeout(() => open({ type: "actual", taskId: id, planned: task.dur }));
     else { close(); toast("The 'if not' version counts. Momentum kept."); }
   };

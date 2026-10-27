@@ -8,10 +8,11 @@ export function RoutinesView() {
   const routines = [...state.routines].sort((a, b) => a.start.localeCompare(b.start));
   return (
     <>
-      <div className="sechead" style={{ marginTop: 16 }}>
-        <p className="intro">Routines are sticky blocks. They appear on your calendar on the days you choose, so training, deep work or a wind-down never has to be planned twice.</p>
+      <div className="sechead">
+        <h2>Routines</h2>
         <button className="btn primary small" onClick={() => open({ type: "routine" })}>Add routine</button>
       </div>
+      <p className="intro" style={{ marginTop: 0, marginBottom: 4 }}>Sticky blocks that appear on the days you choose, so training or deep work never has to be planned twice.</p>
       {!routines.length ? (
         <div className="card empty"><div className="what">No routines yet</div><div>Add things you do on a set rhythm, like training on Mon/Wed/Fri at 18:00.</div></div>
       ) : (

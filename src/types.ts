@@ -86,6 +86,8 @@ export interface Rule {
 export interface CheckIn {
   energy?: "low" | "steady" | "high";
   sleep?: number;
+  /** dismissed the morning check-in for this day */
+  skipped?: boolean;
   ex?: boolean;
 }
 
@@ -126,6 +128,10 @@ export interface State {
   notes: Note[];
   actuals: Actual[];
   notify?: NotifyPrefs;
+  /** usual waking hours; the timeline folds away the rest */
+  dayHours?: { start: string; end: string };
+  /** finished (or skipped) first-time setup */
+  onboarded?: boolean;
   /** ms timestamp of the last local edit, used for sync */
   updatedAt?: number;
 }

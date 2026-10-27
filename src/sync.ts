@@ -30,6 +30,8 @@ export function merge(a: State, b: State): State {
     notes: byId(older.notes || [], newer.notes || []),
     actuals: byId(older.actuals || [], newer.actuals || []),
     notify: newer.notify || older.notify,
+    dayHours: newer.dayHours || older.dayHours,
+    onboarded: newer.onboarded || older.onboarded,
     updatedAt: Date.now(),
   };
 }

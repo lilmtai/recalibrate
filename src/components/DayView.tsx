@@ -4,8 +4,7 @@ import { BARRIER_LABEL, INSTEAD_LABEL } from "../constants";
 import type { Task } from "../types";
 import { addDays, DAY_SHORT, fmt, fmtDur, norm, nowMin, parseKey, toMin, today, uid, weekday } from "../lib/time";
 import { cuesFor, materialize, needsLog, notesFor, tasksFor, unplacedFor } from "../lib/plan";
-import { isWin, multiplier } from "../lib/stats";
-import { daySummary } from "../lib/actuals";
+import { isWin } from "../lib/stats";
 import { HOUR, snap, Timeline } from "./Timeline";
 
 type TrayItem = { kind: "note" | "task"; id: string; title: string; dur: number };
@@ -18,23 +17,19 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
   const tasks = tasksFor(state, date);
   const cues = cuesFor(state, date);
   const lowDay = ci.energy === "low" || (ci.sleep !== undefined && ci.sleep < 6);
-  const hasEx = state.tasks.some((t) => t.ex) || state.routines.some((r) => r.ex);
   const [reorg, setReorg] = useState(false);
   const [selected, setSelected] = useState<TrayItem | null>(null);
   const [ghost, setGhost] = useState<Ghost | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const [night, setNight] = useState(false);
 
-  const setCheckin = (patch: Partial<typeof ci>) =>
-    update((s) => { s.checkins[date] = { ...(s.checkins[date] || {}), ...patch }; });
-  const clearExamples = () =>
-    update((s) => {
-      s.tasks = s.tasks.filter((t) => !t.ex);
-      s.routines = s.routines.filter((r) => !r.ex);
-      s.rules = s.rules.filter((r) => !r.ex);
-      s.notes = s.notes.filter((n) => !n.ex);
-      s.actuals = s.actuals.filter((a) => !a.ex);
-      for (const k of Object.keys(s.checkins)) if (s.checkins[k].ex) delete s.checkins[k];
-    });
+  // show your usual hours (plus anything planned outside them); the night folds away
+  const hrs = state.dayHours || { start: "07:00", end: "23:00" };
+  const floorH = (m: number) => Math.floor(m / 60) * 60;
+  const ceilH = (m: number) => Math.ceil(m / 60) * 60;
+  const from = night ? 0 : Math.max(0, Math.min(floorH(toMin(hrs.start)), ...tasks.map((t) => floorH(toMin(t.start))), ...(isToday ? [floorH(now)] : [])));
+  const to = night ? 1440 : Math.min(1440, Math.max(ceilH(toMin(hrs.end)), ...tasks.map((t) => ceilH(toMin(t.start) + t.dur)), ...(isToday ? [ceilH(now + 1)] : [])));
+
 
   // place a tray item (post-it or parked block) at a time on the day
   const place = (item: TrayItem, minute: number) => {
@@ -55,7 +50,7 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
     const inner = timelineRef.current;
     const box = inner?.parentElement?.getBoundingClientRect();
     if (!inner || !box || clientX < box.left || clientX > box.right || clientY < box.top || clientY > box.bottom) return null;
-    return ((clientY - inner.getBoundingClientRect().top) / HOUR) * 60;
+    return from + ((clientY - inner.getBoundingClientRect().top) / HOUR) * 60;
   };
   const onSlot = (minute: number) => {
     if (selected) place(selected, minute);
@@ -114,25 +109,9 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
         <button className="btn ghost small" onClick={() => setDate(addDays(date, -1))} aria-label="Previous day">‹</button>
         {!isToday && <button className="btn small" onClick={() => setDate(today())}>Back to today</button>}
         <button className="btn ghost small" onClick={() => setDate(addDays(date, 1))} aria-label="Next day">›</button>
-        <span className="spacer" />
-        {hasEx && <button className="btn ghost small" onClick={clearExamples}>Clear example data</button>}
       </div>
 
-      <section className="checkin" aria-label="Daily check-in">
-        <div><span className="lbl">Energy</span>
-          <span className="seg">
-            {(["low", "steady", "high"] as const).map((e) => (
-              <button key={e} aria-pressed={ci.energy === e} onClick={() => setCheckin({ energy: e })}>{e[0].toUpperCase() + e.slice(1)}</button>
-            ))}
-          </span></div>
-        <div><label className="lbl" htmlFor="sleep">Slept</label>
-          <input className="sleep" id="sleep" type="number" min={0} max={14} step={0.5} placeholder="7"
-            value={ci.sleep ?? ""} onChange={(e) => setCheckin({ sleep: e.target.value === "" ? undefined : +e.target.value })} />{" "}
-          <span className="muted small">h</span></div>
-        {!notificationsOn && (
-          <button className="btn small" onClick={() => open({ type: "setup" })}>Turn on reminders</button>
-        )}
-      </section>
+      <CheckinRow date={date} isToday={isToday} tasks={tasks} notificationsOn={notificationsOn} />
 
       {toLog.length > 0 ? (
         <div className="banner">
@@ -164,16 +143,20 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
             </div>
           )}
           {selected && <div className="hint placing">Tap a time on the day to place “{selected.title}”. <button className="linkbtn" onClick={() => setSelected(null)}>Cancel</button></div>}
-          <Timeline ref={timelineRef} tasks={tasks} cues={cues} lowDay={lowDay} isToday={isToday} reorg={reorg} onSlot={onSlot} />
+          <Timeline ref={timelineRef} tasks={tasks} cues={cues} lowDay={lowDay} isToday={isToday} reorg={reorg} onSlot={onSlot} from={from} to={to} />
+          {(night || from > 0 || to < 1440) && (
+            <button className="btn ghost small nightbtn" onClick={() => setNight(!night)}>
+              {night ? "Fold the night away" : `Show night hours (before ${fmt(from)}, after ${fmt(to % 1440)})`}
+            </button>
+          )}
           {!tasks.length && !reorg && (
-            <div className="hint">Nothing on the timeline yet. Tap any time to add a block, or add a routine from the Routines tab.</div>
+            <div className="hint">Nothing on the timeline yet. Tap any time to add a block, or use the + button.</div>
           )}
         </section>
         <aside className="side">
           {isToday && <NowCard tasks={tasks} now={now} />}
           <TodoCard date={date} isToday={isToday} tray={tray} drag={drag} selected={selected} />
           <CuesCard cues={cues} now={isToday ? now : -1} />
-          <DayScore tasks={tasks} />
         </aside>
       </div>
 
@@ -188,7 +171,7 @@ function TodoCard({ date, isToday, tray, drag, selected }: {
   date: string; isToday: boolean; tray: Task[]; selected: TrayItem | null;
   drag: { start: (e: PointerEvent<HTMLElement>, i: TrayItem) => void; move: (e: PointerEvent<HTMLElement>) => void; end: (e: PointerEvent<HTMLElement>) => void };
 }) {
-  const { state, update, open } = useApp();
+  const { state, update, open, celebrate } = useApp();
   const [text, setText] = useState("");
   const notes = notesFor(state, date, isToday);
   const add = () => {
@@ -197,8 +180,11 @@ function TodoCard({ date, isToday, tray, drag, selected }: {
     update((s) => { s.notes.push({ id: uid(), date, text: t, done: false }); });
     setText("");
   };
-  const toggle = (id: string) =>
+  const toggle = (id: string) => {
+    const wasDone = state.notes.find((x) => x.id === id)?.done;
     update((s) => { const n = s.notes.find((x) => x.id === id)!; n.done = !n.done; n.doneDate = n.done ? today() : undefined; });
+    if (!wasDone) celebrate();
+  };
   const remove = (id: string) => update((s) => { s.notes = s.notes.filter((x) => x.id !== id); });
   const nudge = (id: string, by: number) =>
     update((s) => { const t = s.tasks.find((x) => x.id === id)!; t.dur = Math.max(15, t.dur + by); });
@@ -277,7 +263,7 @@ function NowCard({ tasks, now }: { tasks: Task[]; now: number }) {
           <div className="checkin-q">
             <span>Halfway check: still on it?</span>
             <div className="row tight">
-              <button className="btn small" onClick={onIt}>On it</button>
+              <button className="btn small light" onClick={onIt}>On it</button>
               <button className="btn small" onClick={() => open({ type: "check", task: cur })}>Doing something else</button>
             </div>
           </div>
@@ -289,7 +275,7 @@ function NowCard({ tasks, now }: { tasks: Task[]; now: number }) {
           </div>
         )}
         {next && <div className="small muted" style={{ marginTop: 10 }}>Next: {next.title} at {next.start}</div>}
-        <div className="actions"><button className="btn small" onClick={() => open({ type: "log", task: cur })}>Log it</button></div>
+        <div className="actions"><button className="btn small light" onClick={() => open({ type: "log", task: cur })}>Log it</button></div>
       </div>
     );
   }
@@ -335,20 +321,39 @@ function CuesCard({ cues, now }: { cues: ReturnType<typeof cuesFor>; now: number
   );
 }
 
-function DayScore({ tasks }: { tasks: Task[] }) {
-  const { state, date, now, setTab } = useApp();
-  const mx = multiplier(state);
-  const sum = daySummary(state, date, date === today() ? now : 1440);
+/** Morning check-in as a small card once a day; afterwards just chips you can tap to change. */
+function CheckinRow({ date, isToday, tasks, notificationsOn }: { date: string; isToday: boolean; tasks: Task[]; notificationsOn: boolean }) {
+  const { state, update, open } = useApp();
+  const ci = state.checkins[date] || {};
+  const [editing, setEditing] = useState(false);
+  const set = (patch: Partial<typeof ci>) => update((s) => { s.checkins[date] = { ...(s.checkins[date] || {}), ...patch }; });
+  const done = tasks.filter(isWin).length;
+  const cap = (x: string) => x[0].toUpperCase() + x.slice(1);
+
+  if (editing || (isToday && !ci.energy && !ci.skipped)) {
+    return (
+      <div className="card morning" aria-label="Daily check-in">
+        <div className="what">{editing ? "Update your check-in" : "Morning check-in · 5 seconds"}</div>
+        <div><label className="lbl" htmlFor="sleep">Slept</label>
+          <input className="sleep" id="sleep" type="number" min={0} max={14} step={0.5} placeholder="7"
+            value={ci.sleep ?? ""} onChange={(e) => set({ sleep: e.target.value === "" ? undefined : +e.target.value })} /> <span className="muted small">h</span></div>
+        <div><span className="lbl">Energy</span>
+          <span className="seg">
+            {(["low", "steady", "high"] as const).map((e) => (
+              <button key={e} aria-pressed={ci.energy === e} onClick={() => { set({ energy: e }); setEditing(false); }}>{cap(e)}</button>
+            ))}
+          </span></div>
+        <span className="spacer" />
+        <button className="btn ghost small" onClick={() => { if (!ci.energy) set({ skipped: true }); setEditing(false); }}>{ci.energy ? "Done" : "Skip today"}</button>
+      </div>
+    );
+  }
   return (
-    <div className="card"><h2>This day</h2>
-      <ul className="list">
-        <li><span className="grow">Followed through</span><span className="time">{tasks.filter(isWin).length}/{tasks.length}</span></li>
-        <li><span className="grow">Logged</span><span className="time">{tasks.filter((t) => t.status !== "open").length}/{tasks.length}</span></li>
-        <li><span className="grow">Planned</span><span className="time">{fmtDur(tasks.reduce((a, t) => a + t.dur, 0))}</span></li>
-        <li><span className="grow">Went as planned</span><span className="time">{fmtDur(sum.onPlan)}</span></li>
-        {mx && <li><span className="grow">Your time multiplier</span><span className="time">{mx.toFixed(1)}×</span></li>}
-      </ul>
-      <div className="actions"><button className="btn small" onClick={() => setTab("myday")}>Compare with My day →</button></div>
+    <div className="chiprow">
+      <button className="chipbtn" onClick={() => setEditing(true)}>Energy · {ci.energy ? cap(ci.energy) : "not set"}</button>
+      {ci.sleep !== undefined && <button className="chipbtn" onClick={() => setEditing(true)}>Slept {ci.sleep} h</button>}
+      {tasks.length > 0 && <span className="chipbtn good">{done} of {tasks.length} done</span>}
+      {!notificationsOn && <button className="chipbtn" onClick={() => open({ type: "setup" })}>Turn on reminders</button>}
     </div>
   );
 }

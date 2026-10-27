@@ -10,6 +10,13 @@ npm run dev      # http://localhost:5173
 npm run build    # production build in dist/
 ```
 
+## Look and navigation
+
+Champagne palette (ivory, deep navy, champagne gold; dark mode in deep navy with gold), DM Serif Display + Plus Jakarta Sans.
+Four tabs (bottom bar on phones): **Today** (Plan / Plan vs. actual), **Week**, **Insights** (Patterns / Playbook), **Me** (routines, day hours, account, phone app, example data).
+A + button adds anything; finishing a block or to-do gets a small gold moment and a light vibration.
+First visit runs a 1-minute setup (day hours + starter routines).
+
 ## What's in it
 
 - **Day**: full 24-hour timeline coloured by area (Main work, Health, Social, Side hustle, Me time), energy/sleep check-in, "Now" card, reminders, "never miss twice" banner. Click an empty slot to add a block there.

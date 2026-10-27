@@ -18,14 +18,17 @@ interface Props {
   reorg: boolean;
   /** when a tray item is selected, clicking an empty slot places it there */
   onSlot: (minute: number) => void;
+  /** visible window in minutes after midnight */
+  from?: number;
+  to?: number;
 }
 
 /** The whole 24-hour day in a scrolling column. In reorganize mode, blocks can be dragged and resized. */
-export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ tasks, cues, lowDay, isToday, reorg, onSlot }, innerRef) {
+export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ tasks, cues, lowDay, isToday, reorg, onSlot, from = 0, to = 1440 }, innerRef) {
   const { open, update, now, date } = useApp();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
-  const y = (m: number) => (m / 60) * HOUR;
+  const y = (m: number) => ((m - from) / 60) * HOUR;
 
   // open the day scrolled to "now" (today) or the first block
   useEffect(() => {
@@ -34,9 +37,9 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ ta
     const first = tasks.length ? Math.min(...tasks.map((t) => toMin(t.start))) : 8 * 60;
     const target = isToday ? now - 90 : first - 30;
     el.scrollTop = Math.max(0, y(target));
-    // only when the day changes, not on every tick
+    // only when the day or the visible window changes, not on every tick
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date]);
+  }, [date, from]);
 
   // side-by-side lanes when blocks overlap
   const lanes: number[] = [];
@@ -53,7 +56,7 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ ta
   const slotClick = (e: MouseEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    onSlot(Math.floor(((e.clientY - rect.top) / HOUR) * 2) * 30);
+    onSlot(from + Math.floor(((e.clientY - rect.top) / HOUR) * 2) * 30);
   };
 
   // drag to move / resize (reorganize mode)
@@ -93,12 +96,12 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ ta
   };
   const toTray = (t: Task) => update((s) => { materialize(s, t).unplaced = true; });
 
-  const hours = Array.from({ length: 25 }, (_, h) => h * 60);
+  const hours = Array.from({ length: (to - from) / 60 + 1 }, (_, h) => from + h * 60);
   return (
     <div className={`tlscroll ${reorg ? "reorg" : ""}`} ref={scrollRef}>
-      <div className="timeline" ref={innerRef} style={{ height: y(1440) + 2 }} onClick={slotClick}>
-        {hours.map((m) => <div key={m} className={`hour ${m % 360 === 0 ? "major" : ""}`} style={{ top: y(m) }}>{m < 1440 ? fmt(m) : ""}</div>)}
-        {isToday && (
+      <div className="timeline" ref={innerRef} style={{ height: y(to) + 2 }} onClick={slotClick}>
+        {hours.map((m) => <div key={m} className={`hour ${m % 360 === 0 ? "major" : ""}`} style={{ top: y(m) }}>{m < to ? fmt(m) : ""}</div>)}
+        {isToday && now >= from && now <= to && (
           <>
             <div className="passed" style={{ height: y(now) }} />
             <div className="nowline" style={{ top: y(now) }} />
@@ -140,7 +143,7 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ ta
                 {t.title}
                 {t.ex && !reorg && <span className="chip ex">example</span>}
               </span>
-              {h > 34 && <span className="m">{sub}</span>}
+              {h > 46 && <span className="m">{sub}</span>}
               {reorg && (
                 <>
                   <span className="totray" role="button" aria-label="Move to tray" title="Move to tray"
@@ -151,7 +154,7 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ ta
             </button>
           );
         })}
-        {!reorg && cues.filter((c) => c.kind === "fix").map((c) => (
+        {!reorg && cues.filter((c) => c.kind === "fix" && c.at >= from && c.at <= to).map((c) => (
           <div key={c.key} className="cue" style={{ top: y(c.at) }} title={c.text}>{fmt(c.at)} {c.text}</div>
         ))}
       </div>

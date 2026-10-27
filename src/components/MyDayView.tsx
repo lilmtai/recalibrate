@@ -29,7 +29,13 @@ export function MyDayView() {
   const acts = actualsFor(state, date);
   const sum = daySummary(state, date, isToday ? now : 1440);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const y = (m: number) => (m / 60) * HOUR;
+  const [night, setNight] = useState(false);
+  const hrs = state.dayHours || { start: "07:00", end: "23:00" };
+  const fl = (m: number) => Math.floor(m / 60) * 60;
+  const cl = (m: number) => Math.ceil(m / 60) * 60;
+  const from = night ? 0 : Math.max(0, Math.min(fl(toMin(hrs.start)), ...plan.map((t) => fl(toMin(t.start))), ...acts.map((a) => fl(a.start)), ...(isToday ? [fl(now)] : [])));
+  const to = night ? 1440 : Math.min(1440, Math.max(cl(toMin(hrs.end)), ...plan.map((t) => cl(toMin(t.start) + t.dur)), ...acts.map((a) => cl(a.end ?? now)), ...(isToday ? [cl(now + 1)] : [])));
+  const y = (m: number) => ((m - from) / 60) * HOUR;
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -37,7 +43,7 @@ export function MyDayView() {
     const first = Math.min(...plan.map((t) => toMin(t.start)), ...acts.map((a) => a.start), 8 * 60);
     el.scrollTop = Math.max(0, y(isToday ? now - 120 : first - 30));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date]);
+  }, [date, from]);
 
   const endOf = (a: Actual) => a.end ?? (isToday ? now : a.start + 15);
   const P = lanesOf(plan, (t) => toMin(t.start), (t) => toMin(t.start) + t.dur);
@@ -46,7 +52,7 @@ export function MyDayView() {
   const addAt = (e: MouseEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
     const r = e.currentTarget.getBoundingClientRect();
-    const m = Math.floor(((e.clientY - r.top) / HOUR) * 4) * 15;
+    const m = from + Math.floor(((e.clientY - r.top) / HOUR) * 4) * 15;
     const cover = plan.find((t) => toMin(t.start) <= m && m < toMin(t.start) + t.dur);
     open({ type: "entry", date, start: cover ? toMin(cover.start) : m, end: cover ? toMin(cover.start) + cover.dur : m + 30 });
   };
@@ -94,11 +100,11 @@ export function MyDayView() {
 
       <div className="twocol-head"><span /><span>Planned</span><span>What really happened</span></div>
       <div className="tlscroll" ref={scrollRef}>
-        <div className="mytl" style={{ height: y(1440) + 2 }}>
-          {Array.from({ length: 25 }, (_, h) => (
-            <div key={h} className={`hour ${h % 6 === 0 ? "major" : ""}`} style={{ top: y(h * 60) }}>{h < 24 ? fmt(h * 60) : ""}</div>
+        <div className="mytl" style={{ height: y(to) + 2 }}>
+          {Array.from({ length: (to - from) / 60 + 1 }, (_, i) => from + i * 60).map((m) => (
+            <div key={m} className={`hour ${m % 360 === 0 ? "major" : ""}`} style={{ top: y(m) }}>{m < to ? fmt(m) : ""}</div>
           ))}
-          {isToday && <div className="nowline" style={{ top: y(now) }} />}
+          {isToday && now >= from && now <= to && <div className="nowline" style={{ top: y(now) }} />}
           <div className="col plan">
             {plan.map((t) => (
               <button key={t.id} className={`block s-${t.status}`} onClick={() => open({ type: "log", task: t })}
@@ -121,7 +127,10 @@ export function MyDayView() {
           </div>
         </div>
       </div>
-      <div className="hint">Logging a block on the Day tab fills this in for you. Tap an empty spot on the right to add anything else you did.</div>
+      {(night || from > 0 || to < 1440) && (
+        <button className="btn ghost small nightbtn" onClick={() => setNight(!night)}>{night ? "Fold the night away" : "Show night hours"}</button>
+      )}
+      <div className="hint">Logging a block on the Plan view fills this in for you. Tap an empty spot on the right to add anything else you did.</div>
     </>
   );
 }

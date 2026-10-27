@@ -1,46 +1,62 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Ctx, type SheetState, type Tab, type ToastAction } from "./ctx";
 import type { Cue } from "./types";
 import { materialize, tasksFor } from "./lib/plan";
 import { useAppState } from "./store";
 import { useReminders } from "./useReminders";
-import { longDate, nowMin, today } from "./lib/time";
-import { loadExample } from "./example";
+import { nowMin, parseKey, today } from "./lib/time";
 import { DayView } from "./components/DayView";
 import { WeekView } from "./components/WeekView";
 import { MyDayView } from "./components/MyDayView";
 import { EntrySheet } from "./components/EntrySheet";
-import { RoutinesView } from "./components/RoutinesView";
 import { PlaybookView } from "./components/PlaybookView";
 import { PatternsView } from "./components/PatternsView";
 import { BlockSheet } from "./components/BlockSheet";
 import { ActualSheet, LogSheet } from "./components/LogSheet";
 import { CheckSheet, MissSheet } from "./components/MissSheet";
-import { AccountSheet, STATUS_LABEL } from "./components/AccountSheet";
-import { useSync } from "./sync";
+import { AccountSheet } from "./components/AccountSheet";
 import { SetupSheet } from "./components/SetupSheet";
+import { MeView } from "./components/MeView";
+import { QuickSheet } from "./components/QuickSheet";
+import { WelcomeSheet } from "./components/WelcomeSheet";
+import { Icon } from "./components/Icon";
+import { useSync } from "./sync";
 import { useInstall, usePush } from "./usePwa";
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: "day", label: "Day" },
-  { key: "myday", label: "My day" },
-  { key: "week", label: "Week" },
-  { key: "routines", label: "Routines" },
-  { key: "playbook", label: "Playbook" },
-  { key: "patterns", label: "Patterns" },
+type Group = "today" | "week" | "insights" | "me";
+const GROUPS: { key: Group; label: string; icon: Parameters<typeof Icon>[0]["name"]; first: Tab }[] = [
+  { key: "today", label: "Today", icon: "sun", first: "day" },
+  { key: "week", label: "Week", icon: "calendar", first: "week" },
+  { key: "insights", label: "Insights", icon: "chart", first: "patterns" },
+  { key: "me", label: "Me", icon: "person", first: "me" },
 ];
+const groupOf = (t: Tab): Group =>
+  t === "day" || t === "myday" ? "today" : t === "week" ? "week" : t === "patterns" || t === "playbook" ? "insights" : "me";
+const VALID: Tab[] = ["day", "myday", "week", "patterns", "playbook", "me"];
+
+const greeting = () => {
+  const h = new Date().getHours();
+  return h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+};
 
 export default function App() {
   const { state, update, replace } = useAppState();
   const sync = useSync(state, replace);
-  const [tab, setTab] = useState<Tab>(() => (localStorage.getItem("recalibrate.tab") as Tab) || "day");
+  const [tab, setTabRaw] = useState<Tab>(() => {
+    const saved = localStorage.getItem("recalibrate.tab") as Tab | "routines" | null;
+    return saved === "routines" ? "me" : saved && VALID.includes(saved as Tab) ? (saved as Tab) : "day";
+  });
   const [date, setDate] = useState(today());
   const [sheet, setSheet] = useState<SheetState>(null);
   const [toasts, setToasts] = useState<{ id: number; msg: string; action?: ToastAction }[]>([]);
+  const [party, setParty] = useState(0);
   const started = useRef(Date.now());
   const stateRef = useRef(state);
   stateRef.current = state;
   const [now, setNow] = useState(nowMin());
+  // remember the last screen inside each tab (Plan vs. Plan-vs-actual, Patterns vs. Playbook)
+  const lastIn = useRef<Record<Group, Tab>>({ today: "day", week: "week", insights: "patterns", me: "me" });
+  const setTab = useCallback((t: Tab) => { lastIn.current[groupOf(t)] = t; setTabRaw(t); window.scrollTo({ top: 0 }); }, []);
 
   useEffect(() => {
     const t = setInterval(() => setNow(nowMin()), 30_000);
@@ -54,7 +70,17 @@ export default function App() {
     // prompts with a button stay longer so there's time to tap them
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), action ? 20_000 : 4000);
   }, []);
+  const celebrate = useCallback(() => {
+    setParty((n) => n + 1);
+    try { navigator.vibrate?.([18, 40, 28]); } catch { /* not supported */ }
+  }, []);
+  useEffect(() => {
+    if (!party) return;
+    const t = setTimeout(() => setParty(0), 1200);
+    return () => clearTimeout(t);
+  }, [party]);
   const close = useCallback(() => setSheet(null), []);
+
   // halfway → check-in panel, end of block → log panel
   const onCue = useCallback((c: Cue) => {
     const t = tasksFor(stateRef.current, today()).find((x) => x.id === c.taskId);
@@ -62,10 +88,18 @@ export default function App() {
     setTab("day");
     setDate(today());
     setSheet(c.kind === "mid" ? { type: "check", task: t } : { type: "log", task: t });
-  }, []);
+  }, [setTab]);
   const install = useInstall();
   const push = usePush(sync.userId, state, update);
   useReminders(state, now, toast, onCue, !push.subscribed);
+
+  // first visit with nothing planned: short setup
+  useEffect(() => {
+    const s = stateRef.current;
+    if (!s.onboarded && !s.tasks.length && !s.routines.length && !new URLSearchParams(window.location.search).get("do")) {
+      setSheet({ type: "welcome" });
+    }
+  }, []);
 
   // opened from a notification: ?task=…&date=…&do=on|check|log
   const pendingLink = useRef<URLSearchParams | null>(new URLSearchParams(window.location.search));
@@ -86,58 +120,69 @@ export default function App() {
       toast("Nice. Keep going.");
     } else if (act === "check") setSheet({ type: "check", task: t });
     else if (act === "log") setSheet({ type: "log", task: t });
-  }, [state, update, toast]);
+  }, [state, update, toast, setTab]);
 
-  const ctx = useMemo(() => ({ state, update, date, setDate, setTab, open: setSheet, close, toast, now }), [state, update, date, close, toast, now]);
-  const empty = !state.tasks.length && !state.routines.length;
+  const ctx = useMemo(() => ({ state, update, date, setDate, setTab, open: setSheet, close, toast, now, celebrate }),
+    [state, update, date, setTab, close, toast, now, celebrate]);
 
-  const title =
-    tab === "day" ? longDate(date)
-    : tab === "myday" ? `My day · ${longDate(date)}`
-    : tab === "week" ? "Week plan"
-    : tab === "routines" ? "Routines"
-    : tab === "playbook" ? "Your playbook"
-    : "Patterns · last 14 days";
+  const group = groupOf(tab);
+  const isToday = date === today();
+  const dayLabel = parseKey(date).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
+  const [eyebrow, title] =
+    group === "today" ? [dayLabel, isToday ? greeting() : parseKey(date).toLocaleDateString(undefined, { weekday: "long" })]
+    : group === "week" ? ["Plan ahead", "Your week"]
+    : group === "insights" ? ["Last 14 days", "Insights"]
+    : [sync.email || "Settings and routines", "Me"];
+  const initial = (sync.email || "R")[0].toUpperCase();
+
+  const sub = (opts: [Tab, string][]): ReactNode => (
+    <div className="subnav" role="group">
+      {opts.map(([t, label]) => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{label}</button>)}
+    </div>
+  );
 
   return (
     <Ctx.Provider value={ctx}>
       <div className="wrap">
         <header className="top">
-          <div>
-            <div className="brand">
-              Recalibrate
-              <button className={`syncbtn s-${sync.status}`} onClick={() => setSheet({ type: "account" })}>
-                <span className="dot" />{sync.email ? STATUS_LABEL[sync.status] : "Sign in to sync"}
-              </button>
-              <button className={`syncbtn ${push.subscribed ? "s-synced" : ""}`} onClick={() => setSheet({ type: "setup" })}>
-                <span className="dot" />{push.subscribed ? "Notifications on" : install.installed ? "Turn on notifications" : "Get the phone app"}
-              </button>
-            </div>
+          <div className="headtext">
+            <div className="eyebrow">{eyebrow}</div>
             <h1>{title}</h1>
           </div>
-          <nav className="tabs" role="tablist">
-            {TABS.map((t) => (
-              <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}>{t.label}</button>
-            ))}
-          </nav>
+          <div className="headright">
+            <nav className="tabs" role="tablist" aria-label="Main">
+              {GROUPS.map((g) => (
+                <button key={g.key} role="tab" aria-selected={group === g.key} onClick={() => setTab(lastIn.current[g.key] || g.first)}>{g.label}</button>
+              ))}
+            </nav>
+            <button className="avatar" onClick={() => setTab("me")} aria-label={`Me: ${sync.email ? "signed in" : "not signed in"}`}>
+              {initial}<span className={`dot s-${sync.status}`} />
+            </button>
+          </div>
         </header>
 
-        {empty && (
-          <div className="banner calm">
-            <b>New here?</b>
-            <span>Load a sample week to see how it works, then clear it from the Day view. <button className="linkbtn" onClick={() => update(loadExample)}>Load an example week</button></span>
-          </div>
-        )}
+        {group === "today" && sub([["day", "Plan"], ["myday", "Plan vs. actual"]])}
+        {group === "insights" && sub([["patterns", "Patterns"], ["playbook", "Playbook"]])}
 
         <main>
           {tab === "day" && <DayView notificationsOn={push.subscribed} />}
           {tab === "myday" && <MyDayView />}
           {tab === "week" && <WeekView />}
-          {tab === "routines" && <RoutinesView />}
-          {tab === "playbook" && <PlaybookView />}
           {tab === "patterns" && <PatternsView />}
+          {tab === "playbook" && <PlaybookView />}
+          {tab === "me" && <MeView sync={sync} pushOn={push.subscribed} installed={install.installed} />}
         </main>
       </div>
+
+      <button className="fab" aria-label="Add" onClick={() => setSheet({ type: "quick" })}><Icon name="plus" size={26} /></button>
+
+      <nav className="bottomnav" role="tablist" aria-label="Main">
+        {GROUPS.map((g) => (
+          <button key={g.key} role="tab" aria-selected={group === g.key} onClick={() => setTab(lastIn.current[g.key] || g.first)}>
+            <Icon name={g.icon} size={23} />{g.label}
+          </button>
+        ))}
+      </nav>
 
       {sheet?.type === "block" && <BlockSheet key={sheet.task?.id || "new"} date={sheet.date} task={sheet.task} start={sheet.start} title={sheet.title} fromNote={sheet.fromNote} />}
       {sheet?.type === "routine" && <BlockSheet routine={sheet.routine} routineMode />}
@@ -149,6 +194,18 @@ export default function App() {
       {sheet?.type === "account" && <AccountSheet sync={sync} />}
       {sheet?.type === "setup" && <SetupSheet install={install} push={push} signedIn={!!sync.email} email={sync.email} />}
       {sheet?.type === "entry" && <EntrySheet key={sheet.entry?.id || "new"} date={sheet.date} entry={sheet.entry} start={sheet.start} end={sheet.end} />}
+      {sheet?.type === "quick" && <QuickSheet />}
+      {sheet?.type === "welcome" && <WelcomeSheet />}
+
+      {party > 0 && (
+        <div className="celebrate" key={party} aria-hidden="true">
+          <div className="ring"><Icon name="check" size={52} stroke={3} /></div>
+          {Array.from({ length: 10 }, (_, i) => {
+            const a = (i / 10) * Math.PI * 2;
+            return <i key={i} className="spark" style={{ "--dx": `${Math.cos(a) * 110}px`, "--dy": `${Math.sin(a) * 110}px` } as CSSProperties} />;
+          })}
+        </div>
+      )}
 
       <div className="toasts" aria-live="polite">
         {toasts.map((t) => (
