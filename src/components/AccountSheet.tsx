@@ -64,7 +64,7 @@ export function AccountSheet({ sync }: {
         <>
           <div className="banner calm" style={{ marginTop: 14 }}>
             <b>Check your inbox.</b>
-            <span>We emailed {email}. Type the code here (best on the Home Screen app), or open the link on this device. Anything you've already planned here gets added to your account.</span>
+            <span>We emailed {email}. Type the code from the email here. In the Home Screen app, use the code, not the link: the link signs in Safari instead. Anything you've already planned here gets added to your account.</span>
           </div>
           <div className="field">
             <label htmlFor="a-code">Code from the email</label>

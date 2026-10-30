@@ -149,7 +149,10 @@ export function useSync(state: State, replace: (s: State) => void) {
   };
 
   const verifyCode = async (email: string, code: string) => {
-    const { error } = await supabase.auth.verifyOtp({ email, token: code.replace(/\s/g, ""), type: "email" });
+    const token = code.replace(/\s/g, "");
+    // a returning user's code is an "email" code; a brand-new account's first code may be a "signup" code
+    let { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+    if (error) ({ error } = await supabase.auth.verifyOtp({ email, token, type: "signup" }));
     return error?.message || null;
   };
 
