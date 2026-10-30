@@ -87,7 +87,8 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ ta
     if (!drag || drag.id !== t.id) return;
     const d = drag;
     setDrag(null);
-    if (!d.moved) return open({ type: "block", date, task: t });
+    // a tap (no drag) lifts the block into the tray beside "Up next"
+    if (!d.moved) return toTray(t);
     update((s) => {
       const real = materialize(s, t);
       real.start = fmt(d.start);
@@ -144,13 +145,7 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ ta
                 {t.ex && !reorg && <span className="chip ex">example</span>}
               </span>
               {h > 46 && <span className="m">{sub}</span>}
-              {reorg && (
-                <>
-                  <span className="totray" role="button" aria-label="Move to tray" title="Move to tray"
-                    onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); toTray(t); }}>↥</span>
-                  <span className="handle" data-handle="1" aria-hidden="true" />
-                </>
-              )}
+              {reorg && <span className="handle" data-handle="1" aria-hidden="true" />}
             </button>
           );
         })}

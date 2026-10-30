@@ -20,7 +20,7 @@ export function QuickSheet() {
   const opts: { icon: IconName; title: string; sub: string; run: () => void }[] = [
     { icon: "block", title: "Plan a block", sub: "Something with a time slot", run: () => open({ type: "block", date }) },
     { icon: "play", title: "What I'm doing right now", sub: "Start tracking it in one tap", run: () => { setTab("myday"); close(); } },
-    { icon: "pen", title: "Log something I did", sub: "Add it to Plan vs. actual", run: () => open({ type: "entry", date: today(), start: Math.max(0, n - 30), end: n }) },
+    { icon: "pen", title: "Log something I did", sub: "Add it to My day", run: () => open({ type: "entry", date: today(), start: Math.max(0, n - 30), end: n }) },
     { icon: "repeat", title: "New routine", sub: "Repeats on the days you pick", run: () => open({ type: "routine" }) },
   ];
   return (

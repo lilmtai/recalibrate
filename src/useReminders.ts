@@ -36,8 +36,8 @@ export function useReminders(
         c.kind === "transition" ? `Heads up: ${c.text}`
         : c.kind === "fix" ? `${c.text} (for ${c.tomorrow ? "tomorrow's " : ""}${c.forTask})`
         : c.text;
-      const action = c.kind === "mid" ? { label: "Check in", run: () => onCue(c) }
-        : c.kind === "end" ? { label: "Log it", run: () => onCue(c) }
+      const action = c.kind === "mid" || c.kind === "transition" ? { label: "Answer", run: () => onCue(c) }
+        : c.kind === "end" ? { label: "Done?", run: () => onCue(c) }
         : undefined;
       toast(msg, action);
       if (permission === "granted" && systemNotify) {

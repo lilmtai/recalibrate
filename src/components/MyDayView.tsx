@@ -130,7 +130,7 @@ export function MyDayView() {
       {(night || from > 0 || to < 1440) && (
         <button className="btn ghost small nightbtn" onClick={() => setNight(!night)}>{night ? "Fold the night away" : "Show night hours"}</button>
       )}
-      <div className="hint">Logging a block on the Plan view fills this in for you. Tap an empty spot on the right to add anything else you did.</div>
+      <div className="hint">Logging a block on Today, or answering a notification, fills this in for you. Tap an empty spot on the right to add anything else you did.</div>
     </>
   );
 }

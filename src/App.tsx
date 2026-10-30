@@ -19,19 +19,22 @@ import { SetupSheet } from "./components/SetupSheet";
 import { MeView } from "./components/MeView";
 import { QuickSheet } from "./components/QuickSheet";
 import { WelcomeSheet } from "./components/WelcomeSheet";
+import { AskSheet } from "./components/AskSheet";
+import { applyNotificationAnswers } from "./lib/answers";
 import { Icon } from "./components/Icon";
 import { useSync } from "./sync";
 import { useInstall, usePush } from "./usePwa";
 
-type Group = "today" | "week" | "insights" | "me";
+type Group = "today" | "myday" | "week" | "insights" | "me";
 const GROUPS: { key: Group; label: string; icon: Parameters<typeof Icon>[0]["name"]; first: Tab }[] = [
   { key: "today", label: "Today", icon: "sun", first: "day" },
+  { key: "myday", label: "My day", icon: "clock", first: "myday" },
   { key: "week", label: "Week", icon: "calendar", first: "week" },
   { key: "insights", label: "Insights", icon: "chart", first: "patterns" },
   { key: "me", label: "Me", icon: "person", first: "me" },
 ];
 const groupOf = (t: Tab): Group =>
-  t === "day" || t === "myday" ? "today" : t === "week" ? "week" : t === "patterns" || t === "playbook" ? "insights" : "me";
+  t === "day" ? "today" : t === "myday" ? "myday" : t === "week" ? "week" : t === "patterns" || t === "playbook" ? "insights" : "me";
 const VALID: Tab[] = ["day", "myday", "week", "patterns", "playbook", "me"];
 
 const greeting = () => {
@@ -55,7 +58,7 @@ export default function App() {
   stateRef.current = state;
   const [now, setNow] = useState(nowMin());
   // remember the last screen inside each tab (Plan vs. Plan-vs-actual, Patterns vs. Playbook)
-  const lastIn = useRef<Record<Group, Tab>>({ today: "day", week: "week", insights: "patterns", me: "me" });
+  const lastIn = useRef<Record<Group, Tab>>({ today: "day", myday: "myday", week: "week", insights: "patterns", me: "me" });
   const setTab = useCallback((t: Tab) => { lastIn.current[groupOf(t)] = t; setTabRaw(t); window.scrollTo({ top: 0 }); }, []);
 
   useEffect(() => {
@@ -87,11 +90,24 @@ export default function App() {
     if (!t || t.status !== "open") return;
     setTab("day");
     setDate(today());
-    setSheet(c.kind === "mid" ? { type: "check", task: t } : { type: "log", task: t });
+    setSheet({ type: "ask", task: t, kind: c.kind === "transition" ? "start" : c.kind });
   }, [setTab]);
   const install = useInstall();
   const push = usePush(sync.userId, state, update);
   useReminders(state, now, toast, onCue, !push.subscribed);
+
+  useEffect(() => {
+    const apply = async () => {
+      const logged = await applyNotificationAnswers(() => stateRef.current, update).catch(() => []);
+      if (logged.length) toast(`From your notifications: ${logged.join(", ")}.`);
+    };
+    apply();
+    const onVis = () => document.visibilityState === "visible" && apply();
+    const onMsg = (e: MessageEvent) => e.data?.type === "pending-answers" && apply();
+    document.addEventListener("visibilitychange", onVis);
+    navigator.serviceWorker?.addEventListener("message", onMsg);
+    return () => { document.removeEventListener("visibilitychange", onVis); navigator.serviceWorker?.removeEventListener("message", onMsg); };
+  }, [update, toast]);
 
   // first visit with nothing planned: short setup
   useEffect(() => {
@@ -120,6 +136,7 @@ export default function App() {
       toast("Nice. Keep going.");
     } else if (act === "check") setSheet({ type: "check", task: t });
     else if (act === "log") setSheet({ type: "log", task: t });
+    else if (act === "ask") setSheet({ type: "ask", task: t, kind: q.get("kind") || "mid" });
   }, [state, update, toast, setTab]);
 
   const ctx = useMemo(() => ({ state, update, date, setDate, setTab, open: setSheet, close, toast, now, celebrate }),
@@ -130,6 +147,7 @@ export default function App() {
   const dayLabel = parseKey(date).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
   const [eyebrow, title] =
     group === "today" ? [dayLabel, isToday ? greeting() : parseKey(date).toLocaleDateString(undefined, { weekday: "long" })]
+    : group === "myday" ? [dayLabel, "My day"]
     : group === "week" ? ["Plan ahead", "Your week"]
     : group === "insights" ? ["Last 14 days", "Insights"]
     : [sync.email || "Settings and routines", "Me"];
@@ -161,7 +179,6 @@ export default function App() {
           </div>
         </header>
 
-        {group === "today" && sub([["day", "Plan"], ["myday", "Plan vs. actual"]])}
         {group === "insights" && sub([["patterns", "Patterns"], ["playbook", "Playbook"]])}
 
         <main>
@@ -196,6 +213,7 @@ export default function App() {
       {sheet?.type === "entry" && <EntrySheet key={sheet.entry?.id || "new"} date={sheet.date} entry={sheet.entry} start={sheet.start} end={sheet.end} />}
       {sheet?.type === "quick" && <QuickSheet />}
       {sheet?.type === "welcome" && <WelcomeSheet />}
+      {sheet?.type === "ask" && <AskSheet key={sheet.task.id + sheet.kind} task={sheet.task} kind={sheet.kind} />}
 
       {party > 0 && (
         <div className="celebrate" key={party} aria-hidden="true">

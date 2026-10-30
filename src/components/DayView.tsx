@@ -138,7 +138,7 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
           </div>
           {reorg && (
             <div className="banner calm reorgbar">
-              <span>Drag a block to move it. Drag its bottom edge to change the length. <b>↥</b> sends it to the tray.</span>
+              <span><b>Tap</b> a block to lift it into the tray. Drag a block to move it, or drag its bottom edge to change its length.</span>
               <button className="btn small" onClick={clearRest}>{isToday ? "Clear the rest of today" : "Clear the whole day"}</button>
             </div>
           )}
@@ -155,7 +155,8 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
         </section>
         <aside className="side">
           {isToday && <NowCard tasks={tasks} now={now} />}
-          <TodoCard date={date} isToday={isToday} tray={tray} drag={drag} selected={selected} />
+          {(reorg || tray.length > 0) && <TrayCard tray={tray} drag={drag} selected={selected} reorg={reorg} />}
+          <TodoCard date={date} isToday={isToday} drag={drag} selected={selected} />
           <CuesCard cues={cues} now={isToday ? now : -1} />
         </aside>
       </div>
@@ -167,9 +168,59 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
   );
 }
 
-function TodoCard({ date, isToday, tray, drag, selected }: {
-  date: string; isToday: boolean; tray: Task[]; selected: TrayItem | null;
-  drag: { start: (e: PointerEvent<HTMLElement>, i: TrayItem) => void; move: (e: PointerEvent<HTMLElement>) => void; end: (e: PointerEvent<HTMLElement>) => void };
+type Drag = { start: (e: PointerEvent<HTMLElement>, i: TrayItem) => void; move: (e: PointerEvent<HTMLElement>) => void; end: (e: PointerEvent<HTMLElement>) => void };
+
+/** Reorganize tray: blocks you lifted off the day. Tap one then tap a time, or drag it back. */
+function TrayCard({ tray, drag, selected, reorg }: { tray: Task[]; drag: Drag; selected: TrayItem | null; reorg: boolean }) {
+  const { update, open, date } = useApp();
+  const nudge = (id: string, by: number) =>
+    update((s) => { const t = s.tasks.find((x) => x.id === id)!; t.dur = Math.max(15, t.dur + by); });
+  const putBack = () => update((s) => { for (const t of s.tasks) if (t.date === date && t.unplaced) t.unplaced = false; });
+  const handle = (item: TrayItem) => ({
+    onPointerDown: (e: PointerEvent<HTMLElement>) => drag.start(e, item),
+    onPointerMove: drag.move,
+    onPointerUp: drag.end,
+  });
+  return (
+    <div className="card traycard">
+      <div className="sechead">
+        <h2>Tray</h2>
+        {tray.length > 0 && <button className="btn ghost small" onClick={putBack}>Put all back</button>}
+      </div>
+      {!tray.length ? (
+        <div className="small muted">{reorg ? "Tap any block on the day to lift it here. Then tap it and tap a new time, or drag it back." : "Empty."}</div>
+      ) : (
+        <>
+          <div className="small muted" style={{ marginBottom: 6 }}>Tap a block, then tap a time on the day. Or drag it by ⋮⋮.</div>
+          <ul className="notes tray">
+            {tray.map((t) => {
+              const item = { kind: "task" as const, id: t.id, title: t.title, dur: t.dur };
+              return (
+                <li key={t.id} className={selected?.id === t.id ? "sel" : ""} style={{ "--c": `var(--c-${t.category})` } as CSSProperties}>
+                  <span className="grip" title="Drag onto the day" {...handle(item)}>⋮⋮</span>
+                  <span className="grow trayname" {...handle(item)}>
+                    <span className="swatch" />{t.routineId && <span className="rt">↻</span>}{t.title}
+                    <span className="small muted traytime"> · was {t.start}</span>
+                  </span>
+                  <span className="durctl">
+                    <button className="iconbtn" aria-label="15 minutes shorter" onClick={() => nudge(t.id, -15)}>−</button>
+                    <span className="time">{fmtDur(t.dur)}</span>
+                    <button className="iconbtn" aria-label="15 minutes longer" onClick={() => nudge(t.id, 15)}>+</button>
+                  </span>
+                  <button className="btn small" onClick={() => open({ type: "block", date, task: t })}>Edit</button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
+function TodoCard({ date, isToday, drag, selected }: {
+  date: string; isToday: boolean; selected: TrayItem | null;
+  drag: Drag;
 }) {
   const { state, update, open, celebrate } = useApp();
   const [text, setText] = useState("");
@@ -186,8 +237,6 @@ function TodoCard({ date, isToday, tray, drag, selected }: {
     if (!wasDone) celebrate();
   };
   const remove = (id: string) => update((s) => { s.notes = s.notes.filter((x) => x.id !== id); });
-  const nudge = (id: string, by: number) =>
-    update((s) => { const t = s.tasks.find((x) => x.id === id)!; t.dur = Math.max(15, t.dur + by); });
   const handle = (item: TrayItem) => ({
     onPointerDown: (e: PointerEvent<HTMLElement>) => drag.start(e, item),
     onPointerMove: drag.move,
@@ -219,25 +268,6 @@ function TodoCard({ date, isToday, tray, drag, selected }: {
       </ul>
       {!notes.length && <div className="small muted">Quick things with no set time. Drag one onto the day when you're ready to do it.</div>}
 
-      {tray.length > 0 && (
-        <>
-          <h2 style={{ marginTop: 16 }}>Tray · drag back onto the day</h2>
-          <ul className="notes tray">
-            {tray.map((t) => (
-              <li key={t.id} className={selected?.id === t.id ? "sel" : ""} style={{ "--c": `var(--c-${t.category})` } as CSSProperties}>
-                <span className="swatch" />
-                <span className="grow">{t.routineId && <span className="rt">↻</span>}{t.title}</span>
-                <span className="durctl">
-                  <button className="iconbtn" aria-label="15 minutes shorter" onClick={() => nudge(t.id, -15)}>−</button>
-                  <span className="time">{fmtDur(t.dur)}</span>
-                  <button className="iconbtn" aria-label="15 minutes longer" onClick={() => nudge(t.id, 15)}>+</button>
-                </span>
-                <span className="grip" title="Drag onto the day, or tap then tap a time" {...handle({ kind: "task", id: t.id, title: t.title, dur: t.dur })}>⋮⋮</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
     </div>
   );
 }

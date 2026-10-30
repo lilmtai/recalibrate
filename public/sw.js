@@ -1,11 +1,13 @@
 /* Recalibrate service worker: offline app shell + push notifications. */
-const CACHE = "recalibrate-v2";
+const CACHE = "recalibrate-v3";
+// answers given straight from a notification, applied by the app when it next runs
+const PENDING = "recalibrate-pending";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== PENDING).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
@@ -39,9 +41,11 @@ self.addEventListener("fetch", (event) => {
 self.addEventListener("push", (event) => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; } catch { d = { title: "Recalibrate", body: event.data && event.data.text() }; }
+  // one-tap answers: the first button never opens the app
   const actions =
-    d.kind === "mid" ? [{ action: "on", title: "On it" }, { action: "check", title: "Doing something else" }]
-    : d.kind === "end" ? [{ action: "log", title: "Log it" }]
+    d.kind === "start" ? [{ action: "on", title: "I'm on it" }, { action: "check", title: "Not doing it" }]
+    : d.kind === "mid" ? [{ action: "on", title: "Still on it" }, { action: "check", title: "Doing something else" }]
+    : d.kind === "end" ? [{ action: "done", title: "Done" }, { action: "log", title: "Not done" }]
     : [];
   event.waitUntil(
     self.registration.showNotification(d.title || "Recalibrate", {
@@ -51,18 +55,34 @@ self.addEventListener("push", (event) => {
       badge: "icon-192.png",
       data: { url: d.url || "./", kind: d.kind },
       actions,
-      requireInteraction: d.kind === "end",
+      requireInteraction: d.kind === "end" || d.kind === "mid",
     }),
   );
 });
 
-// Tapping a notification opens the app on the right panel.
+// Save a one-tap answer for the app and tell any open window right away.
+async function remember(action, url) {
+  const answer = { act: action, task: url.searchParams.get("task"), date: url.searchParams.get("date"), at: Date.now() };
+  const cache = await caches.open(PENDING);
+  await cache.put(new Request(`pending/${answer.at}-${Math.random().toString(36).slice(2, 8)}`), new Response(JSON.stringify(answer)));
+  const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+  wins.forEach((w) => w.postMessage({ type: "pending-answers" }));
+}
+
+// Notification buttons and taps.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const data = event.notification.data || {};
   const url = new URL(data.url || "./", self.registration.scope);
-  const action = event.action || (data.kind === "mid" ? "check" : data.kind === "end" ? "log" : "");
+  // "I'm on it" / "Still on it" / "Done": log it quietly, don't open the app
+  if (event.action === "on" || event.action === "done") {
+    event.waitUntil(remember(event.action, url));
+    return;
+  }
+  // a tap on the notification itself (iPhone has no buttons): open a one-tap question
+  const action = event.action || (data.kind === "start" || data.kind === "mid" || data.kind === "end" ? "ask" : "");
   if (action) url.searchParams.set("do", action);
+  if (data.kind) url.searchParams.set("kind", data.kind);
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
       for (const w of wins) {

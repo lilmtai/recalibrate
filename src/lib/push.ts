@@ -25,9 +25,9 @@ export function buildQueue(s: State, days = 7): QueueItem[] {
       if (at < soon) continue;
       const link = c.taskId ? `./?task=${encodeURIComponent(c.taskId)}&date=${d}` : `./?date=${d}`;
       const [title, body] =
-        kind === "start" ? [`${c.forTask} in 5 min`, "Wrap up what you're doing and get ready."]
+        kind === "start" ? [`${c.forTask} in 5 min`, "Wrap up and get ready. On it?"]
         : kind === "mid" ? [`Halfway through ${c.forTask}`, "Still on it?"]
-        : kind === "end" ? [`${c.forTask} just ended`, "Tap to log what really happened."]
+        : kind === "end" ? [`${c.forTask} just ended`, "Done?"]
         : [c.text, `For ${c.tomorrow ? "tomorrow's " : ""}${c.forTask}`];
       out.push({ send_at: new Date(at).toISOString(), title, body, url: link, tag: `${d}|${c.key}|${c.at}`, kind });
     }

@@ -13,7 +13,7 @@ npm run build    # production build in dist/
 ## Look and navigation
 
 Champagne palette (ivory, deep navy, champagne gold; dark mode in deep navy with gold), DM Serif Display + Plus Jakarta Sans.
-Four tabs (bottom bar on phones): **Today** (Plan / Plan vs. actual), **Week**, **Insights** (Patterns / Playbook), **Me** (routines, day hours, account, phone app, example data).
+Five tabs (bottom bar on phones): **Today**, **My day** (plan vs. what really happened), **Week**, **Insights** (Patterns / Playbook), **Me** (routines, day hours, account, phone app, example data).
 A + button adds anything; finishing a block or to-do gets a small gold moment and a light vibration.
 First visit runs a 1-minute setup (day hours + starter routines).
 
@@ -82,7 +82,10 @@ Notifications that arrive when the app is closed:
 2. Whenever the plan changes, the app writes the next 7 days of reminders to `push_queue`
    (5 min before a block, halfway check-in, end-of-block log prompt, fix reminders).
 3. `pg_cron` calls the `send-push` Edge Function every minute; it sends what's due with Web Push.
-4. Tapping a notification opens the right panel (`?task=…&do=log|check|on`).
+4. Notification buttons answer without opening the app: "I'm on it" / "Still on it" / "Done" are saved by the
+   service worker (`recalibrate-pending` cache) and applied by the app when it next runs (`src/lib/answers.ts`).
+   "Not doing it" / "Not done" open the app to log what happened instead. A plain tap (iPhone shows no buttons)
+   opens a one-tap question (`?task=…&do=ask&kind=start|mid|end`).
 
 Setup: run `supabase/push.sql`, deploy `supabase/functions/send-push` with JWT verification off,
 and set its secrets `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET`.
