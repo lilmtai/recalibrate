@@ -156,5 +156,26 @@ export function useSync(state: State, replace: (s: State) => void) {
     return error?.message || null;
   };
 
-  return { email: session?.user.email || null, userId: userId || null, status, signIn, verifyCode, signOut, syncNow: pull };
+  // email + password: works entirely inside the app (no email link to open)
+  const friendly = (m: string) =>
+    /invalid login/i.test(m) ? "Email or password is wrong. If you first signed in with a link, set a password there (Me → Account & sync) or create a new account."
+    : /already registered|already exists/i.test(m) ? "There's already an account for this email. Sign in instead."
+    : /fetch|network/i.test(m) ? "Couldn't reach the server. Check your connection and try again."
+    : m;
+  const signInPassword = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return error ? friendly(error.message) : null;
+  };
+  const signUpPassword = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return { error: friendly(error.message), confirm: false };
+    // Supabase returns no session when "Confirm email" is on
+    return { error: null, confirm: !data.session };
+  };
+  const setPassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    return error ? friendly(error.message) : null;
+  };
+
+  return { email: session?.user.email || null, userId: userId || null, status, signIn, verifyCode, signOut, syncNow: pull, signInPassword, signUpPassword, setPassword };
 }
