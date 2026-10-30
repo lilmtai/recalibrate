@@ -2,13 +2,13 @@ import { useState, type ReactNode } from "react";
 import { useApp } from "../ctx";
 import { DEFAULT_NOTIFY } from "../lib/push";
 import type { NotifyPrefs } from "../types";
-import type { PushResult } from "../usePwa";
+import type { PushOutcome } from "../usePwa";
 import { Sheet } from "./Sheet";
 
 type Install = { installed: boolean; canPrompt: boolean; install: () => Promise<void>; ios: boolean };
 type Push = {
   supported: boolean; subscribed: boolean; permission: string;
-  enable: () => Promise<PushResult>; disable: () => Promise<void>; test: () => Promise<string>;
+  enable: () => Promise<PushOutcome>; disable: () => Promise<void>; test: () => Promise<string>;
 };
 
 const KINDS: { key: keyof NotifyPrefs; label: string; sub: string }[] = [
@@ -31,19 +31,24 @@ function Step({ n, done, title, children }: { n: number; done: boolean; title: s
 export function SetupSheet({ install, push, signedIn, email }: { install: Install; push: Push; signedIn: boolean; email: string | null }) {
   const { state, update, close, open, toast } = useApp();
   const [msg, setMsg] = useState("");
+  const [detail, setDetail] = useState("");
   const prefs = { ...DEFAULT_NOTIFY, ...state.notify };
   const needsInstallFirst = install.ios && !install.installed;
 
   const turnOn = async () => {
-    setMsg("");
-    const r = await push.enable();
+    setMsg(""); setDetail("");
+    const { result: r, detail: d } = await push.enable();
+    setDetail(d || "");
     if (r === "ok") toast("Notifications are on for this device.");
     else if (r === "signin") setMsg("Sign in first, so your reminders can follow your plan.");
     else if (r === "denied") setMsg("Notifications are blocked. Allow them for Recalibrate in your phone or browser settings, then try again.");
     else if (r === "unsupported") setMsg(install.ios ? "On iPhone, open Recalibrate from your Home Screen first (step 1)." : "This browser doesn't support notifications.");
-    else setMsg("Couldn't turn on notifications. Check that the Supabase push setup is done, then try again.");
+    else if (r === "nosetup") setMsg("The notification server isn't set up yet. Run supabase/push.sql in the Supabase SQL Editor, then try again.");
+    else if (r === "subscribe") setMsg("This device couldn't sign up for notifications. Close Recalibrate fully, reopen it, and try again.");
+    else setMsg("Couldn't save this device for notifications. Check your connection, then try again.");
   };
   const sendTest = async () => {
+    setDetail("");
     const r = await push.test();
     setMsg(r === "ok" ? "Test sent. It should arrive within a minute, even if you close the app." : "Couldn't send a test. Check the Supabase push setup.");
   };
@@ -67,7 +72,7 @@ export function SetupSheet({ install, push, signedIn, email }: { install: Instal
             : <button className="btn primary small" disabled={!signedIn} onClick={turnOn}>Turn on notifications</button>}
         </Step>
       </div>
-      {msg && <div className="banner calm" style={{ marginTop: 12 }}><span>{msg}</span></div>}
+      {msg && <div className="banner calm" style={{ marginTop: 12 }}><span>{msg}{detail && <><br /><span className="small muted">Details: {detail}</span></>}</span></div>}
 
       {push.subscribed && (
         <>

@@ -36,7 +36,12 @@ async function registration() {
   return existing || navigator.serviceWorker.register("./sw.js", { scope: "./" });
 }
 
-export type PushResult = "ok" | "signin" | "denied" | "unsupported" | "error";
+export type PushResult = "ok" | "signin" | "denied" | "unsupported" | "nosetup" | "subscribe" | "error";
+export type PushOutcome = { result: PushResult; detail?: string };
+
+/** Supabase says the push tables or function don't exist yet (push.sql not run). */
+const missingSetup = (e: { code?: string; message?: string }) =>
+  e.code === "42P01" || e.code === "PGRST205" || e.code === "PGRST202" || /schema cache|does not exist/i.test(e.message || "");
 
 /**
  * Push notifications that arrive when the app is closed.
@@ -54,26 +59,31 @@ export function usePush(userId: string | null, state: State, update: (fn: (s: St
     navigator.serviceWorker.getRegistration().then((r) => r?.pushManager.getSubscription()).then((s) => setSubscribed(!!s)).catch(() => {});
   }, [supported]);
 
-  const enable = useCallback(async (): Promise<PushResult> => {
-    if (!supported) return "unsupported";
-    if (!userId) return "signin";
+  const enable = useCallback(async (): Promise<PushOutcome> => {
+    if (!supported) return { result: "unsupported" };
+    if (!userId) return { result: "signin" };
     const perm = await Notification.requestPermission();
     setPermission(perm);
-    if (perm !== "granted") return "denied";
+    if (perm !== "granted") return { result: "denied" };
+    let sub: PushSubscription;
     try {
       const reg = await registration();
       await navigator.serviceWorker.ready;
-      const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: applicationServerKey() }));
+      sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: applicationServerKey() }));
+    } catch (e) {
+      return { result: "subscribe", detail: e instanceof Error ? `${e.name}: ${e.message}` : String(e) };
+    }
+    try {
       const j = sub.toJSON();
       const { error } = await supabase.from("push_subscriptions").upsert({ endpoint: sub.endpoint, user_id: userId, p256dh: j.keys!.p256dh, auth: j.keys!.auth });
-      if (error) return "error";
-      setSubscribed(true);
-      update((s) => { s.notify = { ...DEFAULT_NOTIFY, ...s.notify, enabled: true }; });
-      lastQueue.current = ""; // force a fresh upload
-      return "ok";
-    } catch {
-      return "error";
+      if (error) return { result: missingSetup(error) ? "nosetup" : "error", detail: [error.code, error.message].filter(Boolean).join(": ") };
+    } catch (e) {
+      return { result: "error", detail: e instanceof Error ? e.message : String(e) };
     }
+    setSubscribed(true);
+    update((s) => { s.notify = { ...DEFAULT_NOTIFY, ...s.notify, enabled: true }; });
+    lastQueue.current = ""; // force a fresh upload
+    return { result: "ok" };
   }, [supported, userId, update]);
 
   const disable = useCallback(async () => {
