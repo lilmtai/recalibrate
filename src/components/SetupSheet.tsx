@@ -9,6 +9,7 @@ type Install = { installed: boolean; canPrompt: boolean; install: () => Promise<
 type Push = {
   supported: boolean; subscribed: boolean; permission: string;
   enable: () => Promise<PushResult>; disable: () => Promise<void>; test: () => Promise<string>;
+  problem: { hint: string; detail: string } | null;
 };
 
 const KINDS: { key: keyof NotifyPrefs; label: string; sub: string }[] = [
@@ -41,7 +42,7 @@ export function SetupSheet({ install, push, signedIn, email }: { install: Instal
     else if (r === "signin") setMsg("Sign in first, so your reminders can follow your plan.");
     else if (r === "denied") setMsg("Notifications are blocked. Allow them for Recalibrate in your phone or browser settings, then try again.");
     else if (r === "unsupported") setMsg(install.ios ? "On iPhone, open Recalibrate from your Home Screen first (step 1)." : "This browser doesn't support notifications.");
-    else setMsg("Couldn't turn on notifications. Check that the Supabase push setup is done, then try again.");
+    else setMsg(""); // the specific problem shows below
   };
   const sendTest = async () => {
     const r = await push.test();
@@ -68,6 +69,12 @@ export function SetupSheet({ install, push, signedIn, email }: { install: Instal
         </Step>
       </div>
       {msg && <div className="banner calm" style={{ marginTop: 12 }}><span>{msg}</span></div>}
+      {!push.subscribed && push.problem && (
+        <div className="banner" style={{ marginTop: 12 }}>
+          <span>{push.problem.hint}</span>
+          <span className="small muted" style={{ flexBasis: "100%", userSelect: "all" }}>Details: {push.problem.detail}</span>
+        </div>
+      )}
 
       {push.subscribed && (
         <>

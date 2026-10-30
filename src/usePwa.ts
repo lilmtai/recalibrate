@@ -48,6 +48,8 @@ export function usePush(userId: string | null, state: State, update: (fn: (s: St
   const [subscribed, setSubscribed] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">(supported ? Notification.permission : "unsupported");
   const lastQueue = useRef<string>("");
+  /** what went wrong on the last "turn on", in plain words + the raw detail */
+  const [problem, setProblem] = useState<{ hint: string; detail: string } | null>(null);
 
   useEffect(() => {
     if (!supported) return;
@@ -60,19 +62,37 @@ export function usePush(userId: string | null, state: State, update: (fn: (s: St
     const perm = await Notification.requestPermission();
     setPermission(perm);
     if (perm !== "granted") return "denied";
+    setProblem(null);
+    const fail = (hint: string, e: unknown) => {
+      const x = e as { message?: string; code?: string; name?: string };
+      setProblem({ hint, detail: [x?.name, x?.code, x?.message].filter(Boolean).join(" · ") || String(e) });
+      return "error" as const;
+    };
+    let sub: PushSubscription;
     try {
       const reg = await registration();
       await navigator.serviceWorker.ready;
-      const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: applicationServerKey() }));
+      sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: applicationServerKey() }));
+    } catch (e) {
+      return fail("Your phone didn't let the app subscribe to notifications. On iPhone: open Recalibrate from the Home Screen (not Safari), make sure iOS is 16.4 or newer, and check Settings → Notifications → Recalibrate is allowed. Then try again.", e);
+    }
+    try {
       const j = sub.toJSON();
       const { error } = await supabase.from("push_subscriptions").upsert({ endpoint: sub.endpoint, user_id: userId, p256dh: j.keys!.p256dh, auth: j.keys!.auth });
-      if (error) return "error";
+      if (error) {
+        const missing = /does not exist|schema cache|PGRST205|42P01/i.test(`${error.code} ${error.message}`);
+        const blocked = /row-level security|permission denied|42501/i.test(`${error.code} ${error.message}`);
+        return fail(
+          missing ? "The notifications tables aren't in Supabase yet. Run supabase/push.sql in the Supabase SQL Editor, then try again."
+          : blocked ? "Supabase blocked saving this device (permissions). Run supabase/push.sql again in the SQL Editor, then try again."
+          : "Supabase couldn't save this device.", error);
+      }
       setSubscribed(true);
       update((s) => { s.notify = { ...DEFAULT_NOTIFY, ...s.notify, enabled: true }; });
       lastQueue.current = ""; // force a fresh upload
       return "ok";
-    } catch {
-      return "error";
+    } catch (e) {
+      return fail("Couldn't reach Supabase. Check your connection and try again.", e);
     }
   }, [supported, userId, update]);
 
@@ -108,5 +128,5 @@ export function usePush(userId: string | null, state: State, update: (fn: (s: St
     return () => clearTimeout(t);
   }, [state, userId]);
 
-  return { supported, subscribed, permission, enable, disable, test };
+  return { supported, subscribed, permission, enable, disable, test, problem };
 }
