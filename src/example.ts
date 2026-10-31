@@ -67,4 +67,21 @@ export function loadExample(s: State) {
   free(-1, 16 * 60, 17 * 60 + 10, "Fixed a client bug (unplanned)", "side");
   free(-1, 20 * 60 + 30, 22 * 60, "Series on Netflix", "me");
   free(0, 7 * 60 + 15, 7 * 60 + 50, "Phone in bed");
+
+  // Work: two projects with next steps, a draft, a goal and journal entries
+  const p1 = uid(), p2 = uid(), iso = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();
+  s.projects.push(
+    { id: p1, name: "Newsletter launch", area: "side", why: "Build an audience before the product", status: "active", created: addDays(T, -10), ex: true },
+    { id: p2, name: "Q4 strategy deck", area: "work", why: "Get the budget approved", status: "active", created: addDays(T, -6), ex: true },
+  );
+  [["Write 5 headline ideas", true], ["Pick a newsletter tool", false], ["Draft issue #1", false], ["Set up the sign-up page", false]].forEach(([text, done], i) =>
+    s.steps.push({ id: uid(), projectId: p1, text: text as string, done: done as boolean, doneAt: done ? addDays(T, -2) : undefined, order: i + 1, ex: true }));
+  [["Outline the 3 key bets", false], ["Pull last quarter's numbers", false], ["Book review with Sam", false]].forEach(([text], i) =>
+    s.steps.push({ id: uid(), projectId: p2, text: text as string, done: false, order: i + 1, next: i === 1, ex: true }));
+  s.pages.push(
+    { id: uid(), projectId: p1, kind: "draft", title: "Issue #1 outline", text: "Hook: why most planners fail people with ADHD.\n1. The plan vs. the real day\n2. One-tap logging\n3. What I learned in a month", created: iso(-2), ex: true },
+    { id: uid(), projectId: p1, kind: "goal", title: "1,000 subscribers", text: "", target: addDays(T, 60), created: iso(-9), ex: true },
+    { id: uid(), projectId: p1, kind: "journal", text: "Headlines were easier than expected once I set a 20-minute timer.", created: iso(-2), ex: true },
+    { id: uid(), projectId: "journal", kind: "journal", text: "Good focus in the morning. Lost the afternoon to email. Snack before the gym worked.", created: iso(-1), ex: true },
+  );
 }

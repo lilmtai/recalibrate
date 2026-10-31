@@ -68,3 +68,31 @@ export function daySummary(s: State, date: string, now: number) {
   const past = plan.filter((t) => t.status === "open" && toMin(t.start) + t.dur <= now).reduce((a, t) => a + t.dur, 0);
   return { planned, onPlan, instead, free, unlogged: past, byCat, count: acts.length };
 }
+
+/** End of the latest logged stretch on a day, before a minute (or null). */
+export function lastEndBefore(s: State, date: string, minute: number): number | null {
+  const ends = s.actuals.filter((a) => a.date === date && a.start < minute).map((a) => a.end ?? a.start);
+  return ends.length ? Math.max(...ends) : null;
+}
+
+/** Where a "what were you doing?" answer should start: after the last logged stretch, at most an hour back. */
+export function wydFrom(s: State, date: string, at: number): number {
+  const last = lastEndBefore(s, date, at);
+  return Math.max(at - 60, last !== null && last < at ? last : at - 60, 0);
+}
+
+/** Log a stretch of what really happened. Mutates the draft. */
+export function logSpan(s: State, date: string, from: number, to: number, fields: Omit<Actual, "id" | "date" | "start" | "end">) {
+  if (to - from < 1) return;
+  s.actuals.push({ id: uid(), date, start: from, end: to, ...fields });
+}
+
+/** "Same as before": stretch the last entry up to now, or repeat it for the last hour. Returns its title. */
+export function logSame(s: State, date: string, at: number): string | null {
+  const prev = s.actuals.filter((a) => a.date === date && a.start < at).sort((a, b) => (b.end ?? b.start) - (a.end ?? a.start))[0];
+  if (!prev) return null;
+  const end = prev.end ?? at;
+  if (end >= at - 90) prev.end = Math.max(end, at);
+  else logSpan(s, date, at - 60, at, { title: prev.title, kind: prev.kind === "plan" ? "free" : prev.kind, category: prev.category, insteadKey: prev.insteadKey });
+  return prev.title;
+}

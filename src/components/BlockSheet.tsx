@@ -23,8 +23,9 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
   const [title, setTitle] = useState(src?.title || titleHint || "");
   const [category, setCategory] = useState<CategoryKey>(src?.category || "work");
   const [start, setStart] = useState(src?.start || defStart);
-  const [dur, setDur] = useState(src ? String(src.dur) : "");
-  const [end, setEnd] = useState(src ? fmt(toMin(src.start) + src.dur) : "");
+  // a new block gets a real finish (start + 30 min) instead of an empty field that looks like "now"
+  const [dur, setDur] = useState(src ? String(src.dur) : "30");
+  const [end, setEnd] = useState(fmt(toMin(src?.start || defStart) + (src?.dur ?? 30)));
   const [energy, setEnergy] = useState<Energy | "none">(src?.energy || "none");
   const [ifNot, setIfNot] = useState(src?.ifNot || "");
   const [repeat, setRepeat] = useState(!!routineMode);
@@ -35,14 +36,18 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
   // start / finish / duration stay in sync: change one, the others follow
   const onStart = (v: string) => {
     setStart(v);
-    if (v && dur) setEnd(fmt(toMin(v) + +dur));
+    // keep the length; the finish moves with the start (capped at midnight)
+    if (v) setEnd(fmt(Math.min(1439, toMin(v) + (+dur || 30))));
   };
+  // the finish can never be before the start: an earlier time is refused and explained
   const onEnd = (v: string) => {
-    setEnd(v);
-    if (v && start) {
-      const d = toMin(v) - toMin(start);
-      setDur(d > 0 ? String(d) : "");
+    if (v && start && toMin(v) <= toMin(start)) {
+      setError(`The finish has to be after the start (${start}).`);
+      return;
     }
+    setError("");
+    setEnd(v);
+    if (v && start) setDur(String(toMin(v) - toMin(start)));
   };
   const onDur = (v: string) => {
     setDur(v);
@@ -55,6 +60,7 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
   function save(everyWeek = false) {
     if (!title.trim()) return setError("Give the block a name.");
     if (!start) return setError("Pick a start time.");
+    if (end && toMin(end) <= toMin(start)) return setError(`The finish has to be after the start (${start}).`);
     if (isRoutine && !days.length) return setError("Pick at least one day for the routine.");
     const d = Math.max(5, +dur || 30);
     const data = {
@@ -112,7 +118,7 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
         <div className="field"><label htmlFor="b-start">Start</label>
           <input id="b-start" type="time" value={start} onChange={(e) => onStart(e.target.value)} /></div>
         <div className="field"><label htmlFor="b-end">Finish <span className="opt">optional</span></label>
-          <input id="b-end" type="time" value={end} onChange={(e) => onEnd(e.target.value)} /></div>
+          <input id="b-end" type="time" value={end} min={start} onChange={(e) => onEnd(e.target.value)} /></div>
         <div className="field"><label htmlFor="b-dur">Duration <span className="opt">min, optional</span></label>
           <input id="b-dur" type="number" min="5" step="5" value={dur} placeholder="30" onChange={(e) => onDur(e.target.value)} /></div>
       </div>

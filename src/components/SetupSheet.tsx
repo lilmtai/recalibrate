@@ -21,6 +21,7 @@ const KINDS: { key: keyof NotifyPrefs; label: string; sub: string }[] = [
   { key: "end", label: "End of a block", sub: "“Log what really happened”" },
   { key: "fix", label: "Reminders from your fixes", sub: "Like “Set an alarm for tomorrow” at 21:00" },
   { key: "free", label: "Free blocks that are due", sub: "Like “Barbershop is due”" },
+  { key: "wyd", label: "“What are you doing?” every hour", sub: "While you're awake; one tap logs your real day" },
 ];
 
 function Step({ n, done, title, children }: { n: number; done: boolean; title: string; children: ReactNode }) {

@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { Actual, BarrierKey, FreeItem, Routine, Rule, State, Task } from "./types";
+import type { Actual, BarrierKey, FreeItem, Page, Project, Routine, Rule, State, Task } from "./types";
 
 export type SheetState =
   | { type: "block"; date: string; task?: Task; start?: string; title?: string; fromNote?: string }
@@ -12,6 +12,9 @@ export type SheetState =
   | { type: "why"; task: Task }
   | { type: "free"; item?: FreeItem }
   | { type: "freedue"; id: string }
+  | { type: "wyd"; date: string; at?: number; from?: number }
+  | { type: "project"; project?: Project }
+  | { type: "page"; page?: Page; projectId: string; kind: Page["kind"] }
   | { type: "note"; noteId: string }
   | { type: "rule"; rule: Rule }
   | { type: "account" }
@@ -24,7 +27,7 @@ export type SheetState =
 export type ToastAction = { label: string; run: () => void };
 
 /** Screens. Bottom tabs group them: Today = day + myday, Insights = patterns + playbook. */
-export type Tab = "day" | "myday" | "week" | "patterns" | "playbook" | "me";
+export type Tab = "day" | "myday" | "work" | "week" | "patterns" | "playbook" | "me";
 
 export interface AppCtx {
   state: State;

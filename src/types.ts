@@ -126,6 +126,44 @@ export interface FreeItem {
   ex?: boolean;
 }
 
+/** A project in the Work tab. */
+export interface Project {
+  id: string;
+  name: string;
+  area: CategoryKey;
+  /** why it matters / the outcome you're after */
+  why?: string;
+  status: "active" | "paused" | "done";
+  created: string;
+  ex?: boolean;
+}
+
+/** One thing to do in a project. The pinned one (or the first open one) is the project's next step. */
+export interface Step {
+  id: string;
+  projectId: string;
+  text: string;
+  done: boolean;
+  doneAt?: string;
+  order: number;
+  next?: boolean;
+  ex?: boolean;
+}
+
+/** Writing in the Work tab: a journal entry, a draft, or a goal. projectId "journal" = general journal. */
+export interface Page {
+  id: string;
+  projectId: string;
+  kind: "journal" | "draft" | "goal";
+  title?: string;
+  text: string;
+  created: string; // ISO date-time
+  updated?: string;
+  target?: string; // goals: YYYY-MM-DD
+  achieved?: boolean;
+  ex?: boolean;
+}
+
 /** Which notifications to send when the app is closed (synced across devices). */
 export interface NotifyPrefs {
   enabled: boolean;
@@ -134,6 +172,7 @@ export interface NotifyPrefs {
   end: boolean; // "log what happened"
   fix: boolean; // reminders from your fixes
   free?: boolean; // free blocks that are due
+  wyd?: boolean; // hourly "what are you doing?"
 }
 
 export interface State {
@@ -145,6 +184,9 @@ export interface State {
   notes: Note[];
   actuals: Actual[];
   free: FreeItem[];
+  projects: Project[];
+  steps: Step[];
+  pages: Page[];
   notify?: NotifyPrefs;
   /** usual waking hours; the timeline folds away the rest */
   dayHours?: { start: string; end: string };
@@ -161,7 +203,7 @@ export interface Cue {
   forTask: string;
   barrier?: BarrierKey;
   tomorrow: boolean;
-  kind: "fix" | "transition" | "mid" | "end" | "free";
+  kind: "fix" | "transition" | "mid" | "end" | "free" | "wyd";
   taskId?: string;
   freeId?: string;
 }

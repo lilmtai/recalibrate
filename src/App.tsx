@@ -8,6 +8,9 @@ import { nowMin, parseKey, today } from "./lib/time";
 import { DayView } from "./components/DayView";
 import { WeekView } from "./components/WeekView";
 import { MyDayView } from "./components/MyDayView";
+import { WorkView } from "./components/WorkView";
+import { PageSheet, ProjectSheet } from "./components/WorkSheets";
+import { WydSheet } from "./components/WydSheet";
 import { EntrySheet } from "./components/EntrySheet";
 import { PlaybookView } from "./components/PlaybookView";
 import { PatternsView } from "./components/PatternsView";
@@ -27,17 +30,18 @@ import { Icon } from "./components/Icon";
 import { useSync } from "./sync";
 import { useInstall, usePush } from "./usePwa";
 
-type Group = "today" | "myday" | "week" | "insights" | "me";
+// Week holds the week plan plus Insights (patterns, playbook) behind a switch.
+type Group = "today" | "myday" | "work" | "week" | "me";
 const GROUPS: { key: Group; label: string; icon: Parameters<typeof Icon>[0]["name"]; first: Tab }[] = [
   { key: "today", label: "Today", icon: "sun", first: "day" },
   { key: "myday", label: "My day", icon: "clock", first: "myday" },
+  { key: "work", label: "Work", icon: "folder", first: "work" },
   { key: "week", label: "Week", icon: "calendar", first: "week" },
-  { key: "insights", label: "Insights", icon: "chart", first: "patterns" },
   { key: "me", label: "Me", icon: "person", first: "me" },
 ];
 const groupOf = (t: Tab): Group =>
-  t === "day" ? "today" : t === "myday" ? "myday" : t === "week" ? "week" : t === "patterns" || t === "playbook" ? "insights" : "me";
-const VALID: Tab[] = ["day", "myday", "week", "patterns", "playbook", "me"];
+  t === "day" ? "today" : t === "myday" ? "myday" : t === "work" ? "work" : t === "week" || t === "patterns" || t === "playbook" ? "week" : "me";
+const VALID: Tab[] = ["day", "myday", "work", "week", "patterns", "playbook", "me"];
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -64,7 +68,7 @@ export default function App() {
   stateRef.current = state;
   const [now, setNow] = useState(nowMin());
   // remember the last screen inside each tab (Plan vs. Plan-vs-actual, Patterns vs. Playbook)
-  const lastIn = useRef<Record<Group, Tab>>({ today: "day", myday: "myday", week: "week", insights: "patterns", me: "me" });
+  const lastIn = useRef<Record<Group, Tab>>({ today: "day", myday: "myday", work: "work", week: "week", me: "me" });
   const setTab = useCallback((t: Tab) => { lastIn.current[groupOf(t)] = t; setTabRaw(t); window.scrollTo({ top: 0 }); }, []);
 
   useEffect(() => {
@@ -124,6 +128,7 @@ export default function App() {
   // halfway → check-in panel, end of block → log panel
   const onCue = useCallback((c: Cue) => {
     if (c.freeId) { setTab("day"); setSheet({ type: "freedue", id: c.freeId }); return; }
+    if (c.kind === "wyd") { setTab("myday"); setDate(today()); setSheet({ type: "wyd", date: today(), at: c.at }); return; }
     const t = tasksFor(stateRef.current, today()).find((x) => x.id === c.taskId);
     if (!t || t.status !== "open") return;
     setTab("day");
@@ -160,6 +165,15 @@ export default function App() {
   useEffect(() => {
     const q = pendingLink.current;
     if (!q || (!q.get("do") && !q.get("date"))) { pendingLink.current = null; return; }
+    if (q.get("wyd")) {
+      pendingLink.current = null;
+      window.history.replaceState(null, "", window.location.pathname);
+      const d = q.get("date") || today();
+      setTab("myday");
+      setDate(d);
+      setSheet({ type: "wyd", date: d, at: Number(q.get("at")) || undefined });
+      return;
+    }
     const freeId = q.get("free");
     if (freeId) {
       if (!state.free.some((f) => f.id === freeId) && Date.now() - started.current < 10_000) return;
@@ -196,8 +210,8 @@ export default function App() {
   const [eyebrow, title] =
     group === "today" ? [dayLabel, isToday ? greeting() : parseKey(date).toLocaleDateString(undefined, { weekday: "long" })]
     : group === "myday" ? [dayLabel, "My day"]
-    : group === "week" ? ["Plan ahead", "Your week"]
-    : group === "insights" ? ["Last 14 days", "Insights"]
+    : group === "work" ? ["Projects, journal, goals", "Work"]
+    : group === "week" ? (tab === "week" ? ["Plan ahead", "Your week"] : ["Last 14 days", "Insights"])
     : [sync.email || "Settings and routines", "Me"];
   const initial = (sync.email || "R")[0].toUpperCase();
 
@@ -227,11 +241,12 @@ export default function App() {
           </div>
         </header>
 
-        {group === "insights" && sub([["patterns", "Patterns"], ["playbook", "Playbook"]])}
+        {group === "week" && sub([["week", "Plan"], ["patterns", "Insights"], ["playbook", "Playbook"]])}
 
         <main key={tab} className="view">
           {tab === "day" && <DayView notificationsOn={push.subscribed} />}
           {tab === "myday" && <MyDayView />}
+          {tab === "work" && <WorkView />}
           {tab === "week" && <WeekView />}
           {tab === "patterns" && <PatternsView />}
           {tab === "playbook" && <PlaybookView />}
@@ -257,6 +272,9 @@ export default function App() {
       {sheet?.type === "why" && <WhySheet key={sheet.task.id} task={sheet.task} />}
       {sheet?.type === "free" && <FreeSheet key={sheet.item?.id || "new"} item={sheet.item} />}
       {sheet?.type === "freedue" && <FreeDueSheet id={sheet.id} />}
+      {sheet?.type === "wyd" && <WydSheet key={`${sheet.date}${sheet.at}${sheet.from}`} date={sheet.date} at={sheet.at} from={sheet.from} />}
+      {sheet?.type === "project" && <ProjectSheet key={sheet.project?.id || "new"} project={sheet.project} />}
+      {sheet?.type === "page" && <PageSheet key={sheet.page?.id || `new${sheet.kind}`} page={sheet.page} projectId={sheet.projectId} kind={sheet.kind} />}
       {sheet?.type === "check" && <CheckSheet task={sheet.task} />}
       {sheet?.type === "rule" && <MissSheet rule={sheet.rule} />}
       {sheet?.type === "account" && <AccountSheet sync={sync} />}

@@ -4,7 +4,7 @@ import { CATEGORIES, INSTEAD } from "../constants";
 import type { Actual, InsteadKey, Task } from "../types";
 import { addDays, fmt, fmtDur, fmtShort, toMin, today, uid } from "../lib/time";
 import { tasksFor } from "../lib/plan";
-import { actualsFor, daySummary } from "../lib/actuals";
+import { actualsFor } from "../lib/actuals";
 import { HOUR } from "./Timeline";
 
 const QUICK: InsteadKey[] = ["phone", "otherwork", "people", "chores", "food", "rest"];
@@ -22,42 +22,56 @@ function lanesOf<T extends { id: string }>(items: T[], start: (i: T) => number, 
   return { lane, n: Math.max(1, lanes.length) };
 }
 
+/**
+ * My day: only what really happened. Filled by the hourly "What are you doing?",
+ * by blocks you mark done / partly / not done, and anything you log yourself.
+ */
 export function MyDayView() {
   const { state, date, setDate, open, now } = useApp();
   const isToday = date === today();
-  const plan = tasksFor(state, date);
   const acts = actualsFor(state, date);
-  const sum = daySummary(state, date, isToday ? now : 1440);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [night, setNight] = useState(false);
   const hrs = state.dayHours || { start: "07:00", end: "23:00" };
   const fl = (m: number) => Math.floor(m / 60) * 60;
   const cl = (m: number) => Math.ceil(m / 60) * 60;
-  const from = night ? 0 : Math.max(0, Math.min(fl(toMin(hrs.start)), ...plan.map((t) => fl(toMin(t.start))), ...acts.map((a) => fl(a.start)), ...(isToday ? [fl(now)] : [])));
-  const to = night ? 1440 : Math.min(1440, Math.max(cl(toMin(hrs.end)), ...plan.map((t) => cl(toMin(t.start) + t.dur)), ...acts.map((a) => cl(a.end ?? now)), ...(isToday ? [cl(now + 1)] : [])));
+  const wake = toMin(hrs.start);
+  const from = night ? 0 : Math.max(0, Math.min(fl(wake), ...acts.map((a) => fl(a.start)), ...(isToday ? [fl(now)] : [])));
+  const to = night ? 1440 : Math.min(1440, Math.max(cl(toMin(hrs.end)), ...acts.map((a) => cl(a.end ?? now)), ...(isToday ? [cl(now + 1)] : [])));
   const y = (m: number) => ((m - from) / 60) * HOUR;
+  const endOf = (a: Actual) => a.end ?? (isToday ? now : a.start + 15);
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
-    const first = Math.min(...plan.map((t) => toMin(t.start)), ...acts.map((a) => a.start), 8 * 60);
-    el.scrollTop = Math.max(0, y(isToday ? now - 120 : first - 30));
+    if (el) el.scrollTop = Math.max(0, y(isToday ? now - 150 : wake));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, from]);
 
-  const endOf = (a: Actual) => a.end ?? (isToday ? now : a.start + 15);
-  const P = lanesOf(plan, (t) => toMin(t.start), (t) => toMin(t.start) + t.dur);
-  const A = lanesOf(acts, (a) => a.start, endOf);
+  // time by area, from what really happened
+  const logged = acts.reduce((x, a) => x + Math.max(0, endOf(a) - a.start), 0);
+  const byCat = CATEGORIES.map((c) => ({ ...c, min: acts.filter((a) => a.category === c.key).reduce((x, a) => x + Math.max(0, endOf(a) - a.start), 0) }));
+  const other = Math.max(0, logged - byCat.reduce((x, c) => x + c.min, 0));
+  const max = Math.max(60, ...byCat.map((c) => c.min), other);
 
+  // gaps of 30+ minutes between waking and now (or the end of the day) with nothing logged
+  const until = isToday ? now : toMin(hrs.end);
+  const gaps: { s: number; e: number }[] = [];
+  let cursor = wake;
+  for (const a of [...acts].sort((p, q) => p.start - q.start)) {
+    if (a.start - cursor >= 30 && a.start <= until) gaps.push({ s: cursor, e: Math.min(a.start, until) });
+    cursor = Math.max(cursor, endOf(a));
+  }
+  if (until - cursor >= 30 && date <= today()) gaps.push({ s: cursor, e: until });
+  const gapMin = gaps.reduce((x, g) => x + g.e - g.s, 0);
+
+  const L = lanesOf(acts, (a) => a.start, endOf);
   const addAt = (e: MouseEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
     const r = e.currentTarget.getBoundingClientRect();
     const m = from + Math.floor(((e.clientY - r.top) / HOUR) * 4) * 15;
-    const cover = plan.find((t) => toMin(t.start) <= m && m < toMin(t.start) + t.dur);
-    open({ type: "entry", date, start: cover ? toMin(cover.start) : m, end: cover ? toMin(cover.start) + cover.dur : m + 30 });
+    open({ type: "entry", date, start: m, end: m + 30 });
   };
 
-  const pct = (n: number) => (sum.planned ? Math.round((n / sum.planned) * 100) : 0);
   return (
     <>
       <div className="daynav">
@@ -65,62 +79,56 @@ export function MyDayView() {
         {!isToday && <button className="btn small" onClick={() => setDate(today())}>Back to today</button>}
         <button className="btn ghost small" onClick={() => setDate(addDays(date, 1))} aria-label="Next day">›</button>
         <span className="spacer" />
-        <button className="btn primary small" onClick={() => open({ type: "entry", date, start: isToday ? Math.max(0, now - 30) : 9 * 60, end: isToday ? now : 9 * 60 + 30 })}>Log something</button>
+        <button className="btn primary small" onClick={() => open({ type: "wyd", date })}>{isToday ? "Log the last hour" : "Log something"}</button>
       </div>
 
-      {isToday && <NowDoing current={plan.find((t) => toMin(t.start) <= now && now < toMin(t.start) + t.dur)} />}
+      {isToday && <NowDoing current={tasksFor(state, date).find((t) => toMin(t.start) <= now && now < toMin(t.start) + t.dur)} />}
 
       <div className="card mysum">
-        <div className="sumrow">
-          <div><b>{fmtDur(sum.planned)}</b><span>planned</span></div>
-          <div className="ok"><b>{fmtDur(sum.onPlan)}</b><span>went as planned · {pct(sum.onPlan)}%</span></div>
-          <div className="off"><b>{fmtDur(sum.instead)}</b><span>something else instead</span></div>
-          <div><b>{fmtDur(sum.free)}</b><span>outside the plan</span></div>
-          <div className="gap"><b>{fmtDur(sum.unlogged)}</b><span>planned, not logged yet</span></div>
+        <div className="sumrow two-up">
+          <div className="ok"><b>{fmtDur(logged)}</b><span>logged {isToday ? "so far" : "this day"}</span></div>
+          <div className="gap"><b>{fmtDur(gapMin)}</b><span>not logged yet{gaps.length ? " · tap a gap below" : ""}</span></div>
         </div>
-        <div className="catcmp">
-          {CATEGORIES.map((c) => {
-            const v = sum.byCat(c.key);
-            const max = Math.max(60, ...CATEGORIES.map((x) => Math.max(sum.byCat(x.key).planned, sum.byCat(x.key).actual)));
-            if (!v.planned && !v.actual) return null;
-            return (
+        {logged > 0 && (
+          <div className="catcmp">
+            {byCat.filter((c) => c.min).map((c) => (
               <div key={c.key} className="catrow" style={{ "--c": `var(--c-${c.key})` } as CSSProperties}>
-                <span className="lbl2">{c.label}</span>
-                <span className="pair">
-                  <i className="pl" style={{ width: `${(v.planned / max) * 100}%` }} />
-                  <i className="ac" style={{ width: `${(v.actual / max) * 100}%` }} />
-                </span>
-                <span className="time">{fmtShort(v.actual)} of {fmtShort(v.planned)}</span>
+                <span>{c.label}</span>
+                <span className="pair"><i className="ac" style={{ width: `${(c.min / max) * 100}%` }} /></span>
+                <span className="time">{fmtShort(c.min)}</span>
               </div>
-            );
-          })}
-          <div className="legend small"><span><i className="key pl" /> planned</span><span><i className="key ac" /> actually done</span></div>
-        </div>
+            ))}
+            {other > 0 && (
+              <div className="catrow">
+                <span>Other</span>
+                <span className="pair"><i className="ac" style={{ width: `${(other / max) * 100}%`, background: "var(--muted)" }} /></span>
+                <span className="time">{fmtShort(other)}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className="twocol-head"><span /><span>Planned</span><span>What really happened</span></div>
-      <div className="tlscroll" ref={scrollRef}>
-        <div className="mytl" style={{ height: y(to) + 2 }}>
+      <div className="tlscroll" ref={scrollRef} style={{ marginTop: 16 }}>
+        <div className="mytl solo" style={{ height: y(to) + 2 }}>
           {Array.from({ length: (to - from) / 60 + 1 }, (_, i) => from + i * 60).map((m) => (
             <div key={m} className={`hour ${m % 360 === 0 ? "major" : ""}`} style={{ top: y(m) }}>{m < to ? fmt(m) : ""}</div>
           ))}
           {isToday && now >= from && now <= to && <div className="nowline" style={{ top: y(now) }} />}
-          <div className="col plan">
-            {plan.map((t) => (
-              <button key={t.id} className={`block s-${t.status}`} onClick={() => open({ type: "log", task: t })}
-                style={{ top: y(toMin(t.start)) + 1, height: Math.max(22, (t.dur / 60) * HOUR - 3), left: `${(P.lane[t.id] / P.n) * 100}%`, width: `calc(${100 / P.n}% - 4px)`, "--c": `var(--c-${t.category})` } as CSSProperties}>
-                <span className="t">{t.title}</span>
+          <div className="col act" onClick={addAt} title="Tap to log what you did">
+            {gaps.filter((g) => g.e > from && g.s < to).map((g) => (
+              <button key={`gap${g.s}`} className="gapblock" style={{ top: y(Math.max(g.s, from)) + 1, height: Math.max(22, ((Math.min(g.e, to) - Math.max(g.s, from)) / 60) * HOUR - 3) }}
+                onClick={() => open({ type: "wyd", date, from: g.s, at: g.e })}>
+                Not logged · {fmt(g.s)}–{fmt(g.e)} · tap to fill
               </button>
             ))}
-          </div>
-          <div className="col act" onClick={addAt} title="Tap to log what you did">
             {acts.map((a) => {
               const end = endOf(a);
               return (
                 <button key={a.id} className={`entry k-${a.kind} ${a.end === undefined ? "running" : ""}`} onClick={() => open({ type: "entry", date, entry: a })}
-                  style={{ top: y(a.start) + 1, height: Math.max(22, ((end - a.start) / 60) * HOUR - 3), left: `${(A.lane[a.id] / A.n) * 100}%`, width: `calc(${100 / A.n}% - 4px)`, "--c": a.category ? `var(--c-${a.category})` : "var(--muted)" } as CSSProperties}>
+                  style={{ top: y(a.start) + 1, height: Math.max(22, ((end - a.start) / 60) * HOUR - 3), left: `${(L.lane[a.id] / L.n) * 100}%`, width: `calc(${100 / L.n}% - 4px)`, "--c": a.category ? `var(--c-${a.category})` : "var(--muted)" } as CSSProperties}>
                   <span className="t">{a.title}</span>
-                  {(end - a.start) / 60 * HOUR > 36 && <span className="m">{fmt(a.start)}–{a.end === undefined ? "now" : fmt(end)}</span>}
+                  {((end - a.start) / 60) * HOUR > 36 && <span className="m">{fmt(a.start)}–{a.end === undefined ? "now" : fmt(end)}</span>}
                 </button>
               );
             })}
@@ -130,12 +138,11 @@ export function MyDayView() {
       {(night || from > 0 || to < 1440) && (
         <button className="btn ghost small nightbtn" onClick={() => setNight(!night)}>{night ? "Fold the night away" : "Show night hours"}</button>
       )}
-      <div className="hint">Logging a block on Today, or answering a notification, fills this in for you. Tap an empty spot on the right to add anything else you did.</div>
+      <div className="hint">Filled by the hourly “What are you doing?”, by blocks you mark done or not done, and anything you add. Tap any empty spot to log something.</div>
     </>
   );
 }
 
-/** One-tap "what am I doing right now" tracker. Starting something new stops the last one. */
 function NowDoing({ current }: { current?: Task }) {
   const { state, update, now, toast } = useApp();
   const [text, setText] = useState("");

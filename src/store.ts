@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { State } from "./types";
 
 const KEY = "recalibrate.v1";
-export const blank = (): State => ({ v: 2, tasks: [], routines: [], rules: [], checkins: {}, notes: [], actuals: [], free: [] });
+export const blank = (): State => ({ v: 2, tasks: [], routines: [], rules: [], checkins: {}, notes: [], actuals: [], free: [], projects: [], steps: [], pages: [] });
 
 /** Upgrades data saved by the first single-file version. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,6 +25,9 @@ export function migrate(raw: any): State {
   s.notes = s.notes || [];
   s.actuals = s.actuals || [];
   s.free = s.free || [];
+  s.projects = s.projects || [];
+  s.steps = s.steps || [];
+  s.pages = s.pages || [];
   s.v = 2;
   return s;
 }

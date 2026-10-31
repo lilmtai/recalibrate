@@ -9,7 +9,7 @@ import { Icon } from "./Icon";
 export function MeView({ sync, pushOn, installed }: { sync: { email: string | null; status: SyncStatus }; pushOn: boolean; installed: boolean }) {
   const { state, update, open, toast } = useApp();
   const hours = state.dayHours || { start: "07:00", end: "23:00" };
-  const hasEx = state.tasks.some((t) => t.ex) || state.routines.some((r) => r.ex) || state.notes.some((n) => n.ex);
+  const hasEx = state.tasks.some((t) => t.ex) || state.routines.some((r) => r.ex) || state.notes.some((n) => n.ex) || state.projects.some((p) => p.ex);
 
   const clearExamples = () => {
     update((s) => {
@@ -18,6 +18,10 @@ export function MeView({ sync, pushOn, installed }: { sync: { email: string | nu
       s.rules = s.rules.filter((r) => !r.ex);
       s.notes = s.notes.filter((n) => !n.ex);
       s.actuals = s.actuals.filter((a) => !a.ex);
+      s.projects = s.projects.filter((x) => !x.ex);
+      s.steps = s.steps.filter((x) => !x.ex);
+      s.pages = s.pages.filter((x) => !x.ex);
+      s.free = s.free.filter((x) => !x.ex);
       for (const k of Object.keys(s.checkins)) if (s.checkins[k].ex) delete s.checkins[k];
     });
     toast("Example data cleared.");

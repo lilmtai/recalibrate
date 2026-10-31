@@ -1,5 +1,5 @@
 /* Recalibrate service worker: offline app shell + push notifications. */
-const CACHE = "recalibrate-v4";
+const CACHE = "recalibrate-v5";
 // answers given straight from a notification, applied by the app when it next runs
 const PENDING = "recalibrate-pending";
 
@@ -47,6 +47,9 @@ self.addEventListener("push", (event) => {
     : d.kind === "mid" ? [{ action: "on", title: "Still on it" }, { action: "check", title: "Doing something else" }]
     : d.kind === "end" ? [{ action: "done", title: "Done" }, { action: "why", title: "Not done" }]
     : d.kind === "free" ? [{ action: "fdone", title: "Done" }, { action: "flater", title: "Tomorrow" }]
+    : d.kind === "wyd" ? (String(d.url).includes("task=")
+        ? [{ action: "wplan", title: "Doing the plan" }, { action: "wyd", title: "Something else" }]
+        : [{ action: "wsame", title: "Same as before" }, { action: "wyd", title: "Something else" }])
     : [];
   event.waitUntil(
     self.registration.showNotification(d.title || "Recalibrate", {
@@ -76,12 +79,12 @@ self.addEventListener("notificationclick", (event) => {
   const data = event.notification.data || {};
   const url = new URL(data.url || "./", self.registration.scope);
   // "I'm on it" / "Still on it" / "Done": log it quietly, don't open the app
-  if (["on", "done", "fdone", "flater"].includes(event.action)) {
+  if (["on", "done", "fdone", "flater", "wplan", "wsame"].includes(event.action)) {
     event.waitUntil(remember(event.action, url));
     return;
   }
   // a tap on the notification itself (iPhone has no buttons): open a one-tap question
-  const action = event.action || (data.kind === "start" || data.kind === "mid" || data.kind === "end" || data.kind === "free" ? "ask" : "");
+  const action = event.action || (data.kind === "wyd" ? "wyd" : data.kind === "start" || data.kind === "mid" || data.kind === "end" || data.kind === "free" ? "ask" : "");
   if (action) url.searchParams.set("do", action);
   if (data.kind) url.searchParams.set("kind", data.kind);
   event.waitUntil(

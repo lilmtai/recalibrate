@@ -87,6 +87,18 @@ export function cuesFor(s: State, date: string): Cue[] {
     const every = f.everyDays ? `Every ${everyLabel(f.everyDays)}. Done, or tomorrow?` : "Done, or tomorrow?";
     out.push({ key: `free:${f.id}`, at: toMin(f.remindAt || "10:00"), text: every, forTask: f.title, tomorrow: false, kind: "free", freeId: f.id });
   }
+  // "What are you doing?" on the hour while you're awake, skipped when a block prompt is already near
+  const hrs = s.dayHours || { start: "07:00", end: "23:00" };
+  const day = tasksFor(s, date);
+  for (let at = (Math.floor(toMin(hrs.start) / 60) + 1) * 60; at <= toMin(hrs.end); at += 60) {
+    if (out.some((c) => c.kind !== "fix" && c.kind !== "free" && Math.abs(c.at - at) <= 10)) continue;
+    const planned = day.find((t) => toMin(t.start) <= at - 1 && at - 1 < toMin(t.start) + t.dur);
+    out.push({
+      key: `wyd:${at}`, at, kind: "wyd", tomorrow: false, forTask: planned?.title || "",
+      text: planned ? `Planned: ${planned.title}. Still on it?` : "Tap to log the last hour.",
+      taskId: planned?.id,
+    });
+  }
   // one cue per fix per day, even if two blocks match
   const seen = new Set<string>();
   return out

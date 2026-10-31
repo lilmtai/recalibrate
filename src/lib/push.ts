@@ -5,7 +5,7 @@ import { cuesFor } from "./plan";
 /** Public half of the Web Push key pair. The private half lives only in Supabase secrets. */
 export const VAPID_PUBLIC_KEY = "BFm8J_2xZfC__a5h1W1dn1okcRT9PTKfDeYL1FkP1NqhKrg1p1L7Cjx5YndvIadd3toaW3Ftd4q_XKBdHFKAIHQ";
 
-export const DEFAULT_NOTIFY: NotifyPrefs = { enabled: true, start: true, mid: true, end: true, fix: true, free: true };
+export const DEFAULT_NOTIFY: NotifyPrefs = { enabled: true, start: true, mid: true, end: true, fix: true, free: true, wyd: true };
 
 export interface QueueItem { send_at: string; title: string; body: string; url: string; tag: string; kind: string }
 
@@ -23,13 +23,15 @@ export function buildQueue(s: State, days = 7): QueueItem[] {
       if (!prefs[kind as keyof NotifyPrefs]) continue;
       const at = midnight + c.at * 60_000;
       if (at < soon) continue;
-      const link = c.taskId ? `./?task=${encodeURIComponent(c.taskId)}&date=${d}`
+      const link = c.kind === "wyd" ? `./?wyd=1&date=${d}&at=${c.at}${c.taskId ? `&task=${encodeURIComponent(c.taskId)}` : ""}`
+        : c.taskId ? `./?task=${encodeURIComponent(c.taskId)}&date=${d}`
         : c.freeId ? `./?free=${encodeURIComponent(c.freeId)}&date=${d}` : `./?date=${d}`;
       const [title, body] =
         kind === "start" ? [`${c.forTask} in 5 min`, "Wrap up and get ready. On it?"]
         : kind === "mid" ? [`Halfway through ${c.forTask}`, "Still on it?"]
         : kind === "end" ? [`${c.forTask} just ended`, "Done?"]
         : kind === "free" ? [`${c.forTask} is due`, c.text]
+        : kind === "wyd" ? ["What are you doing?", c.text]
         : [c.text, `For ${c.tomorrow ? "tomorrow's " : ""}${c.forTask}`];
       out.push({ send_at: new Date(at).toISOString(), title, body, url: link, tag: `${d}|${c.key}|${c.at}`, kind });
     }

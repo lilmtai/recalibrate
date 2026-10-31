@@ -13,14 +13,19 @@ Owner: Imam (GitHub `lilmtai`). Live: https://lilmtai.github.io/recalibrate/ (Gi
 
 ## Code map
 - `src/App.tsx`: shell, tabs, sheets (pop-up panels), toasts, deep links from notifications, applying notification answers.
-- `src/ctx.ts`: app context + `SheetState` union (every pop-up panel) + `Tab` (`day | myday | week | patterns | playbook | me`).
-- `src/types.ts`: data model (`State`, `Task`, `Routine`, `Rule`, `Note`, `Actual`, `CheckIn`, `NotifyPrefs`).
+- `src/ctx.ts`: app context + `SheetState` union (every pop-up panel) + `Tab` (`day | myday | work | week | patterns | playbook | me`).
+  Bottom tabs: Today, My day, Work, Week (Plan / Insights / Playbook switch), Me.
+- `src/types.ts`: data model (`State`, `Task`, `Routine`, `Rule`, `Note`, `Actual`, `CheckIn`, `FreeItem`, `Project`, `Step`, `Page`, `NotifyPrefs`).
 - `src/store.ts`: load/save/migrate state; `update(fn)` edits a structuredClone draft and stamps `updatedAt`.
 - `src/sync.ts`: Supabase auth (password, email code, link) + sync of one `planner_state` row per user; merges on conflict.
 - `src/usePwa.ts`: install prompt, push subscription, uploads the next 7 days of reminders to `push_queue`.
 - `src/useReminders.ts`: in-app reminders/toasts while the app is open.
 - `src/lib/plan.ts`: `tasksFor` (real tasks + virtual routine instances, ids `rt:<routineId>:<date>`), `materialize`, `cuesFor`, rules.
-- `src/lib/actuals.ts`: "My day" entries written from block outcomes (`syncActuals`) + day summary.
+- `src/lib/actuals.ts`: "My day" entries (only what really happened): from block outcomes (`syncActuals`),
+  the hourly WYD ("What are you doing?", `WydSheet`, `logSpan`, `logSame`, `wydFrom`) and manual entries. No plan-vs-actual view.
+- WYD: `cuesFor` adds kind `wyd` on the hour during `dayHours`; notification buttons "Doing the plan" (`wplan`) / "Same as before" (`wsame`) log quietly.
+- `src/lib/work.ts` + `components/WorkView.tsx` + `components/WorkSheets.tsx`: Work tab (projects, one next step each, steps,
+  journal (`projectId: "journal"` = general), drafts, goals, quick capture).
 - `src/lib/answers.ts`: applies one-tap notification answers saved by the service worker (`recalibrate-pending` cache).
 - `src/lib/stats.ts`, `src/lib/push.ts`, `src/lib/time.ts`, `src/constants.ts`, `src/example.ts` (example week, flagged `ex`).
 - Free blocks (`FreeItem` in `state.free`): no set time, repeat every N days, show as due in the to-do card,

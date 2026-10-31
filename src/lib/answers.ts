@@ -1,10 +1,11 @@
 import type { State } from "../types";
 import { materialize, tasksFor } from "./plan";
 import { freeDone, freeLater, scoreRules } from "./actions";
-import { syncActuals } from "./actuals";
+import { logSame, logSpan, syncActuals, wydFrom } from "./actuals";
+import { toMin } from "./time";
 
 const PENDING = "recalibrate-pending";
-type Answer = { act: "on" | "done" | "fdone" | "flater"; task: string | null; free?: string | null; date: string | null; at: number };
+type Answer = { act: "on" | "done" | "fdone" | "flater" | "wplan" | "wsame"; task: string | null; free?: string | null; date: string | null; at: number };
 const localDay = (ms: number) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 /**
@@ -23,7 +24,8 @@ export async function applyNotificationAnswers(getState: () => State, update: (f
   }
   const s0 = getState();
   const isFree = (a: Answer) => a.act === "fdone" || a.act === "flater";
-  const ready = answers.filter(({ a }) => isFree(a) ? (s0.free || []).some((f) => f.id === a.free)
+  const ready = answers.filter(({ a }) => a.act === "wsame" ? true
+    : isFree(a) ? (s0.free || []).some((f) => f.id === a.free)
     : a.task && a.date && tasksFor(s0, a.date).some((t) => t.id === a.task));
   // answers for blocks this device hasn't synced yet wait up to a day
   const stale = answers.filter((x) => !ready.includes(x) && Date.now() - x.a.at > 86_400_000);
@@ -31,6 +33,20 @@ export async function applyNotificationAnswers(getState: () => State, update: (f
   if (ready.length) {
     update((s) => {
       for (const { a } of ready.sort((x, y) => x.a.at - y.a.at)) {
+        const day = a.date || localDay(a.at);
+        const at = new Date(a.at).getHours() * 60 + new Date(a.at).getMinutes();
+        if (a.act === "wsame") {
+          const title = logSame(s, day, at);
+          if (title) logged.push(`still ${title}`);
+          continue;
+        }
+        if (a.act === "wplan") {
+          const t = tasksFor(s, day).find((x) => x.id === a.task);
+          if (!t) continue;
+          logSpan(s, day, Math.max(wydFrom(s, day, at), toMin(t.start)), at, { title: t.title, kind: "plan", category: t.category, taskId: t.id });
+          logged.push(`on ${t.title}`);
+          continue;
+        }
         if (isFree(a)) {
           const f = s.free.find((x) => x.id === a.free);
           if (!f) continue;
