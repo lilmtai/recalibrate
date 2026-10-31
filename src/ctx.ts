@@ -12,7 +12,8 @@ export type SheetState =
   | { type: "why"; task: Task }
   | { type: "free"; item?: FreeItem }
   | { type: "freedue"; id: string }
-  | { type: "wyd"; date: string; at?: number; from?: number }
+  | { type: "wyd"; date: string; at?: number; from?: number; promptKey?: string }
+  | { type: "review" }
   | { type: "project"; project?: Project }
   | { type: "page"; page?: Page; projectId: string; kind: Page["kind"] }
   | { type: "note"; noteId: string }

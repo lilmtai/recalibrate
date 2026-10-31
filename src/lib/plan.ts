@@ -32,12 +32,16 @@ export function tasksFor(s: State, date: string): Task[] {
 export const unplacedFor = (s: State, date: string) =>
   s.tasks.filter((t) => t.date === date && t.unplaced && t.status !== "skipped");
 
-/** Post-its for a day. On today, unfinished ones from earlier days roll over. */
+/** To-dos for a day (plus, on today, ones finished today). Nothing rolls over by itself. */
 export function notesFor(s: State, date: string, isToday: boolean): Note[] {
   return s.notes
-    .filter((n) => (isToday ? (n.date <= date && !n.done) || n.doneDate === date : n.date === date))
+    .filter((n) => n.date === date || (isToday && n.done && n.doneDate === date))
     .sort((a, b) => Number(a.done) - Number(b.done) || a.date.localeCompare(b.date));
 }
+
+/** Unfinished to-dos from days before `date`: they wait for a review instead of rolling over. */
+export const notesToReview = (s: State, date: string): Note[] =>
+  s.notes.filter((n) => !n.done && n.date < date).sort((a, b) => a.date.localeCompare(b.date));
 
 /** A block that ended (or a past day's block) with nothing logged. */
 export const needsLog = (t: Task, date: string, today: string, now: number) =>

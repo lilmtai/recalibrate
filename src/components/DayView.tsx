@@ -3,8 +3,8 @@ import { useApp } from "../ctx";
 import { BARRIER_LABEL, INSTEAD_LABEL } from "../constants";
 import type { Task } from "../types";
 import { addDays, DAY_SHORT, fmt, fmtDur, norm, nowMin, parseKey, toMin, today, uid, weekday } from "../lib/time";
-import { cuesFor, everyLabel, freeDue, materialize, needsLog, notesFor, tasksFor, unplacedFor } from "../lib/plan";
-import { freeDone, freeLater } from "../lib/actions";
+import { cuesFor, everyLabel, freeDue, materialize, needsLog, notesFor, notesToReview, tasksFor, unplacedFor } from "../lib/plan";
+import { freeDone, freeLater, markStarted } from "../lib/actions";
 import { isWin } from "../lib/stats";
 import { HOUR, snap, Timeline } from "./Timeline";
 
@@ -231,6 +231,7 @@ function TodoCard({ date, isToday, drag, selected }: {
   const [text, setText] = useState("");
   const notes = notesFor(state, date, isToday);
   const due = freeDue(state, date, isToday);
+  const toReview = isToday ? notesToReview(state, date).length : 0;
   const add = () => {
     const t = text.trim();
     if (!t) return;
@@ -256,6 +257,11 @@ function TodoCard({ date, isToday, drag, selected }: {
         <input id="note-new" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()}
           placeholder="Add a to-do… (Enter)" aria-label="New to-do" />
       </div>
+      {toReview > 0 && (
+        <button className="reviewbtn" onClick={() => open({ type: "review" })}>
+          {toReview} unfinished from before · <b>Review</b>
+        </button>
+      )}
       {due.length > 0 && (
         <ul className="notes freelist">
           {due.map((f) => (
@@ -275,7 +281,7 @@ function TodoCard({ date, isToday, drag, selected }: {
         {notes.map((n) => (
           <li key={n.id} className={`${n.done ? "done" : ""} ${selected?.id === n.id ? "sel" : ""}`}>
             <input type="checkbox" checked={n.done} onChange={() => toggle(n.id)} aria-label={`Done: ${n.text}`} />
-            <span className="grow">{n.text}{n.date < date && !n.done && <span className="chip">since {DAY_SHORT[weekday(n.date)]}</span>}</span>
+            <span className="grow">{n.text}</span>
             {!n.done && (
               <>
                 <button className="iconbtn" title="Give it a time" aria-label="Give it a time"
@@ -302,7 +308,7 @@ function NowCard({ tasks, now }: { tasks: Task[]; now: number }) {
     const p = Math.round(((now - toMin(cur.start)) / cur.dur) * 100);
     const last = cur.checks?.[cur.checks.length - 1];
     const onIt = () => {
-      update((s) => { const t = materialize(s, cur); (t.checks ||= []).push({ at: now, on: true }); });
+      update((s) => { const t = materialize(s, cur); (t.checks ||= []).push({ at: now, on: true }); markStarted(t); });
       toast("Nice. Keep going.");
     };
     return (

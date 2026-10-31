@@ -21,7 +21,8 @@ Rules for every agent (Claude Code, Codex):
 - Local-first: state in localStorage (`recalibrate.v1`), synced to Supabase when signed in.
 - Supabase project `lhrxjgzgyxlfzitrjzxp` (URL + publishable key in `src/lib/supabase.ts`; safe to be public, RLS protects data).
 - PWA: `public/manifest.webmanifest`, `public/sw.js` (offline shell, Web Push, notification actions).
-- Checks: `npx tsc -b` and `npm run build`. No test suite; verify flows with Playwright (preinstalled in cloud sessions).
+- Checks: `npm test` (Vitest, `src/**/*.test.ts`, fixtures in `src/test/`), `npx tsc -b`, `npm run build`.
+  Tests run in the deploy workflow; a failing test blocks the release. UI flows: Playwright (preinstalled in cloud sessions).
 
 ## Code map
 - `src/App.tsx`: shell, tabs, sheets (pop-up panels), toasts, deep links from notifications, applying notification answers.
@@ -38,6 +39,11 @@ Rules for every agent (Claude Code, Codex):
 - WYD: `cuesFor` adds kind `wyd` on the hour during `dayHours`; notification buttons "Doing the plan" (`wplan`) / "Same as before" (`wsame`) log quietly.
 - `src/lib/work.ts` + `components/WorkView.tsx` + `components/WorkSheets.tsx`: Work tab (projects, one next step each, steps,
   journal (`projectId: "journal"` = general), drafts, goals, quick capture).
+- History ("what really happened") syncs through Supabase `execution_log` (`supabase/history.sql`): `src/useHistory.ts`
+  (network, mode blob/table), `src/lib/historySync.ts` + `src/lib/history.ts` (pure, tested). Deletions go through
+  `dropActuals` (tombstones); WYD answers carry `promptKey` so a prompt is logged once across devices.
+- Blocks record `startedAt` / `endedAt` (`markStarted` / `markEnded` in `lib/actions.ts`); `startState()` tells
+  never-started from started-unfinished. Old unfinished to-dos never roll over: `notesToReview` + `ReviewSheet`.
 - `src/lib/answers.ts`: applies one-tap notification answers saved by the service worker (`recalibrate-pending` cache).
 - `src/lib/stats.ts`, `src/lib/push.ts`, `src/lib/time.ts`, `src/constants.ts`, `src/example.ts` (example week, flagged `ex`).
 - Free blocks (`FreeItem` in `state.free`): no set time, repeat every N days, show as due in the to-do card,

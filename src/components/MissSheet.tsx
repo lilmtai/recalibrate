@@ -4,7 +4,7 @@ import { BARRIERS, INSTEAD, LEADS, SUGGESTED_FIXES } from "../constants";
 import type { BarrierKey, InsteadKey, Remind, Rule, Task } from "../types";
 import { addDays, norm, today, uid } from "../lib/time";
 import { materialize, remindLabel } from "../lib/plan";
-import { scoreRules } from "../lib/actions";
+import { markEnded, markStarted, scoreRules } from "../lib/actions";
 import { syncActuals } from "../lib/actuals";
 import { Chips, Sheet } from "./Sheet";
 
@@ -40,6 +40,7 @@ export function MissSheet({ task, rule, partial, barrier: initialBarrier }: { ta
     update((s) => {
       const t = materialize(s, task);
       t.status = partial ? "partial" : "missed";
+      if (partial) { markStarted(t); markEnded(t); }
       t.share = partial ? share : undefined;
       t.barrier = barrier;
       t.instead = instead.length || insteadNote.trim() ? { what: instead, note: insteadNote.trim() || undefined } : undefined;

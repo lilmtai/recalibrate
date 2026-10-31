@@ -34,6 +34,11 @@ export function PatternsView() {
     insights.push(`**${cats[0].label}** is your weakest area at **${s.byCategory[cats[0].key]}%**, while ${cats[cats.length - 1].label.toLowerCase()} sits at ${s.byCategory[cats[cats.length - 1].key]}%.`);
   const topB = Object.entries(s.barriers).sort((a, b) => b[1] - a[1])[0];
   if (topB && topB[1] >= 2) insights.push(`Your most common barrier is **${BARRIER_LABEL[topB[0] as BarrierKey].toLowerCase()}** (${topB[1]}×). Fix the system for that one first.`);
+  const unfinished = s.notStarted + s.startedUnfinished;
+  if (unfinished >= 3 && s.notStarted / unfinished >= 0.6)
+    insights.push(`**${s.notStarted} of ${unfinished}** unfinished blocks were never started. Starting is the hard part: try “just 5 minutes”.`);
+  else if (unfinished >= 3 && s.startedUnfinished / unfinished >= 0.6)
+    insights.push(`You usually start, but **${s.startedUnfinished} of ${unfinished}** unfinished blocks stopped partway. Shorter blocks or a halfway check may help.`);
   const topI = Object.entries(s.instead).sort((a, b) => b[1] - a[1])[0];
   if (topI && topI[1] >= 30) insights.push(`When blocks slip, the time mostly goes to **${INSTEAD_LABEL[topI[0] as InsteadKey].toLowerCase()}** (${fmtDur(topI[1])} in two weeks).`);
   const under = s.estimates.find((e) => e.ratio >= 1.25 && e.n >= 2);

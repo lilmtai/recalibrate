@@ -19,9 +19,17 @@ synced as **one JSON row per user** (`planner_state`) in Supabase. Arrays are me
 | `NotifyPrefs`, `dayHours` | Preferences | User |
 | — | — | **Distraction**, **AIRecommendation**, schedule change history: *not modelled yet* |
 
-Server tables: `planner_state` (the JSON row), `push_subscriptions`, `push_queue` (`supabase/*.sql`).
+Server tables: `planner_state` (the JSON row), `push_subscriptions`, `push_queue`, and **`execution_log`**
+(`supabase/history.sql`): one row per "what really happened" entry, soft-deleted, unique per prompt.
+Sync: `src/useHistory.ts` (network) + `src/lib/historySync.ts` / `src/lib/history.ts` (pure, tested).
+Until `history.sql` is run, history stays inside `planner_state` ("blob" mode); after, the planner row leaves it out.
 
 ## Architectural weaknesses (fix before adding big features)
+
+Status after Sprint 0: **1 fixed** (41 unit tests incl. a two-device sync simulation), **2 fixed for history**
+(the log lives in `execution_log`, 60 days on the phone), **4 partly** (soft deletes; edits still overwrite),
+**6 fixed** (one answer per prompt via `prompt_key`). 3 and 5 remain.
+
 
 1. **No tests.** Scheduling, recurrence, stats and sync merge are pure functions with no test coverage.
    The spec requires tests for scheduling and recovery logic. → Add Vitest for `src/lib/*` first.

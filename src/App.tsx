@@ -11,6 +11,7 @@ import { MyDayView } from "./components/MyDayView";
 import { WorkView } from "./components/WorkView";
 import { PageSheet, ProjectSheet } from "./components/WorkSheets";
 import { WydSheet } from "./components/WydSheet";
+import { ReviewSheet } from "./components/ReviewSheet";
 import { EntrySheet } from "./components/EntrySheet";
 import { PlaybookView } from "./components/PlaybookView";
 import { PatternsView } from "./components/PatternsView";
@@ -29,6 +30,7 @@ import { applyNotificationAnswers } from "./lib/answers";
 import { Icon } from "./components/Icon";
 import { useSync } from "./sync";
 import { useInstall, usePush } from "./usePwa";
+import { useHistory } from "./useHistory";
 
 // Week holds the week plan plus Insights (patterns, playbook) behind a switch.
 type Group = "today" | "myday" | "work" | "week" | "me";
@@ -128,7 +130,7 @@ export default function App() {
   // halfway → check-in panel, end of block → log panel
   const onCue = useCallback((c: Cue) => {
     if (c.freeId) { setTab("day"); setSheet({ type: "freedue", id: c.freeId }); return; }
-    if (c.kind === "wyd") { setTab("myday"); setDate(today()); setSheet({ type: "wyd", date: today(), at: c.at }); return; }
+    if (c.kind === "wyd") { setTab("myday"); setDate(today()); setSheet({ type: "wyd", date: today(), at: c.at, promptKey: `wyd:${today()}:${c.at}` }); return; }
     const t = tasksFor(stateRef.current, today()).find((x) => x.id === c.taskId);
     if (!t || t.status !== "open") return;
     setTab("day");
@@ -137,6 +139,7 @@ export default function App() {
   }, [setTab]);
   const install = useInstall();
   const push = usePush(sync.userId, state, update);
+  const history = useHistory(sync.userId, state, update);
   useReminders(state, now, toast, onCue, !push.subscribed);
 
   useEffect(() => {
@@ -171,7 +174,8 @@ export default function App() {
       const d = q.get("date") || today();
       setTab("myday");
       setDate(d);
-      setSheet({ type: "wyd", date: d, at: Number(q.get("at")) || undefined });
+      const at = Number(q.get("at")) || undefined;
+      setSheet({ type: "wyd", date: d, at, promptKey: at ? `wyd:${d}:${at}` : undefined });
       return;
     }
     const freeId = q.get("free");
@@ -250,7 +254,7 @@ export default function App() {
           {tab === "week" && <WeekView />}
           {tab === "patterns" && <PatternsView />}
           {tab === "playbook" && <PlaybookView />}
-          {tab === "me" && <MeView sync={sync} pushOn={push.subscribed} installed={install.installed} />}
+          {tab === "me" && <MeView sync={sync} pushOn={push.subscribed} installed={install.installed} historyMode={history.mode} />}
         </main>
       </div>
 
@@ -272,7 +276,8 @@ export default function App() {
       {sheet?.type === "why" && <WhySheet key={sheet.task.id} task={sheet.task} />}
       {sheet?.type === "free" && <FreeSheet key={sheet.item?.id || "new"} item={sheet.item} />}
       {sheet?.type === "freedue" && <FreeDueSheet id={sheet.id} />}
-      {sheet?.type === "wyd" && <WydSheet key={`${sheet.date}${sheet.at}${sheet.from}`} date={sheet.date} at={sheet.at} from={sheet.from} />}
+      {sheet?.type === "review" && <ReviewSheet />}
+      {sheet?.type === "wyd" && <WydSheet key={`${sheet.date}${sheet.at}${sheet.from}`} date={sheet.date} at={sheet.at} from={sheet.from} promptKey={sheet.promptKey} />}
       {sheet?.type === "project" && <ProjectSheet key={sheet.project?.id || "new"} project={sheet.project} />}
       {sheet?.type === "page" && <PageSheet key={sheet.page?.id || `new${sheet.kind}`} page={sheet.page} projectId={sheet.projectId} kind={sheet.kind} />}
       {sheet?.type === "check" && <CheckSheet task={sheet.task} />}

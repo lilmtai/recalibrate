@@ -1,7 +1,7 @@
 import { useApp } from "../ctx";
 import type { Task } from "../types";
 import { materialize } from "../lib/plan";
-import { scoreRules } from "../lib/actions";
+import { markEnded, markStarted, scoreRules } from "../lib/actions";
 import { syncActuals } from "../lib/actuals";
 import { Sheet } from "./Sheet";
 
@@ -14,12 +14,12 @@ export function AskSheet({ task, kind }: { task: Task; kind: string }) {
   const ended = kind === "end";
 
   const onIt = () => {
-    update((s) => { const t = materialize(s, task); (t.checks ||= []).push({ at: now, on: true }); });
+    update((s) => { const t = materialize(s, task); (t.checks ||= []).push({ at: now, on: true }); markStarted(t); });
     close();
     toast("Logged. Back to it.");
   };
   const done = () => {
-    update((s) => { const t = materialize(s, task); t.status = "done"; scoreRules(s, t, true); syncActuals(s, t); });
+    update((s) => { const t = materialize(s, task); t.status = "done"; markEnded(t); scoreRules(s, t, true); syncActuals(s, t); });
     celebrate();
     close();
   };

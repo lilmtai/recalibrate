@@ -1,5 +1,6 @@
 import type { BarrierKey, CategoryKey, InsteadKey, State, Task } from "../types";
 import { addDays, today } from "./time";
+import { startState } from "./actions";
 
 export const isWin = (t: Task) => t.status === "done" || t.status === "ifnot";
 /** 1 for done or "if not", the done share for partial, 0 for missed */
@@ -59,6 +60,9 @@ export function stats14(s: State) {
     rate: rate(ts),
     ifNots: ts.filter((t) => t.status === "ifnot").length,
     partials: ts.filter((t) => t.status === "partial").length,
+    // of the blocks that didn't get finished: never started vs started and dropped
+    notStarted: ts.filter((t) => startState(t) === "not_started").length,
+    startedUnfinished: ts.filter((t) => startState(t) === "started").length,
     instead,
     estimates,
     checks: checks.length,

@@ -25,3 +25,21 @@ export function freeLater(s: State, id: string, from: string) {
   const f = s.free.find((x) => x.id === id);
   if (f) f.nextDue = addDays(from, 1);
 }
+
+/** Record the real start of a block (first time only). Mutates the draft task. */
+export function markStarted(t: Task, at: Date = new Date()) {
+  if (!t.startedAt) t.startedAt = at.toISOString();
+}
+
+/** Record the real end of a block. */
+export function markEnded(t: Task, at: Date = new Date()) {
+  t.endedAt = at.toISOString();
+}
+
+/** "never started" vs "started, unfinished" vs finished, for analytics. */
+export function startState(t: Task): "finished" | "started" | "not_started" | "open" {
+  if (t.status === "done" || t.status === "ifnot") return "finished";
+  if (t.status === "partial" || ((t.status === "missed") && t.startedAt)) return "started";
+  if (t.status === "missed") return "not_started";
+  return t.startedAt ? "started" : "open";
+}

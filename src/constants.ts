@@ -11,15 +11,20 @@ export const CAT_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.labe
 
 export const ENERGY_LABEL: Record<Energy, string> = { low: "Low", med: "Medium", high: "High" };
 
+// The spec's standard reasons first, then the owner's own.
 export const BARRIERS: { key: BarrierKey; label: string }[] = [
+  { key: "distracted", label: "Distracted" },
+  { key: "hardstart", label: "Hard to start" },
+  { key: "longer", label: "Took longer than planned" },
   { key: "energy", label: "Low energy" },
-  { key: "bloated", label: "Bloated / hungry" },
-  { key: "overwhelm", label: "Overwhelmed" },
-  { key: "time", label: "Lost track of time" },
-  { key: "forgot", label: "Forgot" },
-  { key: "avoid", label: "Avoiding it" },
-  { key: "sleep", label: "Poor sleep" },
   { key: "cameup", label: "Something came up" },
+  { key: "avoid", label: "Avoiding it" },
+  { key: "forgot", label: "Forgot" },
+  { key: "time", label: "Lost track of time" },
+  { key: "overwhelm", label: "Overwhelmed" },
+  { key: "bloated", label: "Bloated / hungry" },
+  { key: "sleep", label: "Poor sleep" },
+  { key: "other", label: "Other" },
 ];
 export const BARRIER_LABEL = Object.fromEntries(BARRIERS.map((b) => [b.key, b.label])) as Record<BarrierKey, string>;
 
@@ -60,6 +65,23 @@ export const SUGGESTED_FIXES: Record<BarrierKey, { fix: string; remind: Remind }
   sleep: [
     { fix: "Phone out of the bedroom", remind: eve("22:30") },
     { fix: "Move hard work to the morning", remind: before(60) },
+  ],
+  distracted: [
+    { fix: "Phone in another room", remind: before(5) },
+    { fix: "Close every tab except this one", remind: before(5) },
+    { fix: "Park stray thoughts in Capture, not your head", remind: before(5) },
+  ],
+  hardstart: [
+    { fix: "Just 5 minutes, then decide", remind: before(5) },
+    { fix: "Write the first 2-minute step", remind: eve("21:00") },
+    { fix: "Lay everything out before it starts", remind: before(15) },
+  ],
+  longer: [
+    { fix: "Plan it 1.5× longer", remind: before(30) },
+    { fix: "Split it into two smaller blocks", remind: eve("21:00") },
+  ],
+  other: [
+    { fix: "Pick a new slot right away", remind: before(15) },
   ],
   cameup: [
     { fix: "Pick a new slot right away", remind: before(15) },

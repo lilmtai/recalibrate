@@ -1,7 +1,7 @@
 # Product requirements and current status
 
 Status: **Done** · **Partial** (exists but short of the spec) · **Missing**.
-Audit date: 2026-10-31 (commit `6b1f534`). Priorities P0 / P1 / P2 from the product spec.
+Audit date: 2026-10-31 (commit `6b1f534`); updated after Sprint 0. Priorities P0 / P1 / P2 from the product spec.
 Backlog items in `ROADMAP.md` reference these IDs.
 
 ## Module 1 · Daily planner (P0)
@@ -14,7 +14,7 @@ Backlog items in `ROADMAP.md` reference these IDs.
 | DP-4 | Transition buffers around high-focus blocks | Missing | |
 | DP-5 | Fixed appointments preserved | Missing | Depends on DP-1. |
 | DP-6 | Recurring tasks never silently disappear | Done | Routines are generated per day (`tasksFor`); edits ask "this day / every week". |
-| DP-7 | No automatic overflow of unfinished work into tomorrow | Partial | Timed blocks don't roll over (good). **To-dos do roll over automatically** ("since Mon") → conflicts with spec; needs a "review unfinished" step. |
+| DP-7 | No automatic overflow of unfinished work into tomorrow | Done | Nothing rolls over. Old unfinished to-dos wait in "N unfinished from before · Review" (`ReviewSheet`): today / pick a day / drop. |
 | DP-8 | Daily capacity limited by realistic available time | Missing | Day hours exist (`dayHours`), not used for capacity. |
 | DP-9 | Capacity indicator: available / planned / buffer / unallocated | Missing | |
 | DP-10 | Overload warning when planned > available | Missing | |
@@ -28,7 +28,7 @@ Backlog items in `ROADMAP.md` reference these IDs.
 | TA-2 | Visual progress through the current hour | Partial | Progress bar per block and a "now" line on the timeline; no hour-progress view. |
 | TA-3 | Notifications before transitions | Done | 5-min "starts soon" (push + in-app). |
 | TA-4 | Hourly execution check-ins | Done | WYD on the hour during waking hours. |
-| TA-5 | Actual start and finish timestamps | Missing | Only outcome + "how long did it take" chips. Needs a Start action (EX-2). |
+| TA-5 | Actual start and finish timestamps | Partial | `Task.startedAt` / `endedAt`, set by "I'm on it", the Now card, notification answers, WYD "I did", "now doing", and logging an outcome. A dedicated Start button comes with EX-2. |
 | TA-6 | Estimated vs actual duration | Done | Actual-time chips → time multiplier, per-block estimates in Insights. |
 | TA-7 | Optional overtime confirmation | Missing | |
 | TA-8 | Automatic recording of unplanned activity | Partial | Logged via WYD / My day, but only when the user answers. |
@@ -48,8 +48,8 @@ Backlog items in `ROADMAP.md` reference these IDs.
 | ID | Requirement | Status | Notes / where |
 | --- | --- | --- | --- |
 | CI-1 | Capture planned activity, actual activity, completion, reason, notes, energy, duration | Partial | Completion (done / partly / "if not" / not done), reason, what-instead, note, daily energy + sleep, actual duration. Planned vs actual are linked by `taskId` on log entries. |
-| CI-2 | Standard reason list | Partial | Ours: low energy, bloated/hungry, overwhelmed, lost track of time, forgot, avoiding it, poor sleep, something came up. **Add:** distraction, hard to start, took longer than planned, other. Keep the owner's own (bloated, poor sleep). |
-| CI-3 | Attempted-but-unfinished vs never-started | Partial | "Partly done" vs "Didn't happen" approximates it; no explicit "never started" with start timestamps (TA-5). |
+| CI-2 | Standard reason list | Done | Distracted, hard to start, took longer than planned, low energy, something came up, avoiding it, forgot, lost track of time, overwhelmed, plus the owner's own (bloated/hungry, poor sleep) and other. Each has suggested fixes. |
+| CI-3 | Attempted-but-unfinished vs never-started | Done | `startState()` from start times + outcome; Insights says when blocks are mostly never started vs dropped partway. |
 | CI-4 | One-tap check-in (5–10 s); more questions only when needed | Done | `AskSheet`, `WhySheet`, `WydSheet`, notification buttons. |
 | CI-5 | Distraction inbox: capture without leaving; processed later, never auto-scheduled | Partial | Quick to-do (+ button) and Work → Capture exist, but they go straight to to-dos/projects; no separate inbox to process. |
 

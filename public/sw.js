@@ -1,5 +1,5 @@
 /* Recalibrate service worker: offline app shell + push notifications. */
-const CACHE = "recalibrate-v5";
+const CACHE = "recalibrate-v6";
 // answers given straight from a notification, applied by the app when it next runs
 const PENDING = "recalibrate-pending";
 
@@ -66,7 +66,7 @@ self.addEventListener("push", (event) => {
 
 // Save a one-tap answer for the app and tell any open window right away.
 async function remember(action, url) {
-  const answer = { act: action, task: url.searchParams.get("task"), free: url.searchParams.get("free"), date: url.searchParams.get("date"), at: Date.now() };
+  const answer = { act: action, task: url.searchParams.get("task"), free: url.searchParams.get("free"), date: url.searchParams.get("date"), prompt: url.searchParams.get("at"), at: Date.now() };
   const cache = await caches.open(PENDING);
   await cache.put(new Request(`pending/${answer.at}-${Math.random().toString(36).slice(2, 8)}`), new Response(JSON.stringify(answer)));
   const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });

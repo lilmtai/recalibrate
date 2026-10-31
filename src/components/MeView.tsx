@@ -1,12 +1,14 @@
 import { useApp } from "../ctx";
 import type { SyncStatus } from "../sync";
 import { loadExample } from "../example";
+import { dropActuals } from "../lib/actuals";
 import { STATUS_LABEL } from "./AccountSheet";
+import type { HistoryMode } from "../useHistory";
 import { RoutinesView } from "./RoutinesView";
 import { Icon } from "./Icon";
 
 /** Me: routines, your day hours, account and sync, phone app and notifications, example data. */
-export function MeView({ sync, pushOn, installed }: { sync: { email: string | null; status: SyncStatus }; pushOn: boolean; installed: boolean }) {
+export function MeView({ sync, pushOn, installed, historyMode }: { sync: { email: string | null; status: SyncStatus }; pushOn: boolean; installed: boolean; historyMode: HistoryMode }) {
   const { state, update, open, toast } = useApp();
   const hours = state.dayHours || { start: "07:00", end: "23:00" };
   const hasEx = state.tasks.some((t) => t.ex) || state.routines.some((r) => r.ex) || state.notes.some((n) => n.ex) || state.projects.some((p) => p.ex);
@@ -17,7 +19,7 @@ export function MeView({ sync, pushOn, installed }: { sync: { email: string | nu
       s.routines = s.routines.filter((r) => !r.ex);
       s.rules = s.rules.filter((r) => !r.ex);
       s.notes = s.notes.filter((n) => !n.ex);
-      s.actuals = s.actuals.filter((a) => !a.ex);
+      dropActuals(s, (a) => !!a.ex);
       s.projects = s.projects.filter((x) => !x.ex);
       s.steps = s.steps.filter((x) => !x.ex);
       s.pages = s.pages.filter((x) => !x.ex);
@@ -46,7 +48,14 @@ export function MeView({ sync, pushOn, installed }: { sync: { email: string | nu
 
       <div className="card mecard">
         <span className="ic"><Icon name="cloud" /></span>
-        <div className="grow"><b>Account & sync</b><span className="small muted">{sync.email ? `${sync.email} · ${STATUS_LABEL[sync.status]}` : "Sign in to keep your planner on your phone and laptop."}</span></div>
+        <div className="grow"><b>Account & sync</b><span className="small muted">{sync.email ? `${sync.email} · ${STATUS_LABEL[sync.status]}` : "Sign in to keep your planner on your phone and laptop."}</span>
+          {sync.email && (
+            <span className="small muted" style={{ display: "block" }}>
+              {historyMode === "table" ? "My day history: stored in its own table, last 60 days on this phone."
+                : historyMode === "blob" ? "My day history: inside your planner (run supabase/history.sql to move it to its own table)."
+                : "My day history: checking…"}
+            </span>
+          )}</div>
         <button className={`btn ${sync.email ? "" : "primary"}`} onClick={() => open({ type: "account" })}>{sync.email ? "Manage" : "Sign in"}</button>
       </div>
 

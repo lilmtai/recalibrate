@@ -544,3 +544,11 @@ table.est .num { font-size: 12.5px; white-space: nowrap; }
 .stepedit { flex: 1 1 calc(100% - 40px); }
 .stepacts { display: flex; align-items: center; gap: 2px; margin-left: 26px; flex-wrap: wrap; }
 .stepacts .iconbtn { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; }
+
+/* review unfinished to-dos */
+.reviewbtn { width: 100%; margin-top: 10px; border: 1px dashed var(--warn); background: var(--warn-soft); color: var(--fg); border-radius: 12px; padding: 9px 12px; font-size: 14px; text-align: left; }
+.reviewbtn b { color: var(--warn); }
+.reviewlist { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.reviewlist li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; }
+.reviewlist .grow { flex: 1 1 100%; }
+.reviewlist input[type="date"] { padding: 6px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }

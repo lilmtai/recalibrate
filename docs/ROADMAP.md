@@ -4,7 +4,7 @@ Order follows the spec's advice: **build the data and scheduling foundation befo
 recommends from incomplete data. Each item lists the requirement IDs it covers (`PRODUCT_REQUIREMENTS.md`)
 and acceptance criteria (AC). An item is done when every AC is met, tests pass, and docs are updated.
 
-## Sprint 0 · Foundation (do first)
+## Sprint 0 · Foundation (do first) · ✅ done (F-5 needs `supabase/history.sql` run once)
 
 **F-1 · Test harness for core logic**
 - AC: Vitest set up (`npm test`), running in CI before deploy.

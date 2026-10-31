@@ -6,13 +6,21 @@ import { tasksFor } from "./plan";
 /** Rough area for time spent instead of a block, so the planned-vs-actual bars add up. */
 const INSTEAD_CAT: Partial<Record<InsteadKey, CategoryKey>> = { otherwork: "work", urgent: "work", hyperfocus: "work", people: "social", rest: "me", food: "me" };
 
+/** Remove history entries and remember their ids so the server learns they were deleted. */
+export function dropActuals(s: State, pred: (a: Actual) => boolean) {
+  const gone = s.actuals.filter(pred).map((a) => a.id);
+  if (!gone.length) return;
+  s.actuals = s.actuals.filter((a) => !pred(a));
+  s.actualTomb = [...(s.actualTomb || []), ...gone];
+}
+
 /**
  * Rewrite the automatic "My day" entries for a block from how it was logged.
  * Done → the block (for its real length); partial → the part done + what filled the rest;
  * missed → what filled the slot. Manual entries are never touched. Mutates the draft.
  */
 export function syncActuals(s: State, t: Task) {
-  s.actuals = s.actuals.filter((a) => !(a.auto && a.taskId === t.id));
+  dropActuals(s, (a) => !!a.auto && a.taskId === t.id);
   const st = toMin(t.start);
   const add = (start: number, end: number, extra: Partial<Actual>) => {
     if (end - start < 1) return;
@@ -84,15 +92,18 @@ export function wydFrom(s: State, date: string, at: number): number {
 /** Log a stretch of what really happened. Mutates the draft. */
 export function logSpan(s: State, date: string, from: number, to: number, fields: Omit<Actual, "id" | "date" | "start" | "end">) {
   if (to - from < 1) return;
+  // a prompt answered twice (button + app, or two devices) is logged once
+  if (fields.promptKey && s.actuals.some((a) => a.promptKey === fields.promptKey)) return;
   s.actuals.push({ id: uid(), date, start: from, end: to, ...fields });
 }
 
 /** "Same as before": stretch the last entry up to now, or repeat it for the last hour. Returns its title. */
-export function logSame(s: State, date: string, at: number): string | null {
+export function logSame(s: State, date: string, at: number, promptKey?: string): string | null {
+  if (promptKey && s.actuals.some((a) => a.promptKey === promptKey)) return null;
   const prev = s.actuals.filter((a) => a.date === date && a.start < at).sort((a, b) => (b.end ?? b.start) - (a.end ?? a.start))[0];
   if (!prev) return null;
   const end = prev.end ?? at;
   if (end >= at - 90) prev.end = Math.max(end, at);
-  else logSpan(s, date, at - 60, at, { title: prev.title, kind: prev.kind === "plan" ? "free" : prev.kind, category: prev.category, insteadKey: prev.insteadKey });
+  else logSpan(s, date, at - 60, at, { title: prev.title, kind: prev.kind === "plan" ? "free" : prev.kind, category: prev.category, insteadKey: prev.insteadKey, promptKey });
   return prev.title;
 }

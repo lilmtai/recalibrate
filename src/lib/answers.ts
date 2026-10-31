@@ -1,11 +1,11 @@
 import type { State } from "../types";
 import { materialize, tasksFor } from "./plan";
-import { freeDone, freeLater, scoreRules } from "./actions";
+import { freeDone, freeLater, markEnded, markStarted, scoreRules } from "./actions";
 import { logSame, logSpan, syncActuals, wydFrom } from "./actuals";
 import { toMin } from "./time";
 
 const PENDING = "recalibrate-pending";
-type Answer = { act: "on" | "done" | "fdone" | "flater" | "wplan" | "wsame"; task: string | null; free?: string | null; date: string | null; at: number };
+type Answer = { act: "on" | "done" | "fdone" | "flater" | "wplan" | "wsame"; task: string | null; free?: string | null; date: string | null; prompt?: string | null; at: number };
 const localDay = (ms: number) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 /**
@@ -35,15 +35,20 @@ export async function applyNotificationAnswers(getState: () => State, update: (f
       for (const { a } of ready.sort((x, y) => x.a.at - y.a.at)) {
         const day = a.date || localDay(a.at);
         const at = new Date(a.at).getHours() * 60 + new Date(a.at).getMinutes();
+        // one answer per hourly prompt, even if it's answered on two devices
+        const promptKey = a.prompt ? `wyd:${day}:${a.prompt}` : undefined;
         if (a.act === "wsame") {
-          const title = logSame(s, day, at);
+          const title = logSame(s, day, at, promptKey);
           if (title) logged.push(`still ${title}`);
           continue;
         }
         if (a.act === "wplan") {
           const t = tasksFor(s, day).find((x) => x.id === a.task);
           if (!t) continue;
-          logSpan(s, day, Math.max(wydFrom(s, day, at), toMin(t.start)), at, { title: t.title, kind: "plan", category: t.category, taskId: t.id });
+          const from = Math.max(wydFrom(s, day, at), toMin(t.start));
+          logSpan(s, day, from, at, { title: t.title, kind: "plan", category: t.category, taskId: t.id, promptKey });
+          const d0 = new Date(a.at); d0.setHours(Math.floor(from / 60), from % 60, 0, 0);
+          markStarted(materialize(s, t), d0);
           logged.push(`on ${t.title}`);
           continue;
         }
@@ -61,9 +66,11 @@ export async function applyNotificationAnswers(getState: () => State, update: (f
         const minute = d.getHours() * 60 + d.getMinutes();
         if (a.act === "on") {
           (real.checks ||= []).push({ at: minute, on: true });
+          markStarted(real, new Date(a.at));
           logged.push(`on ${real.title}`);
         } else {
           real.status = "done";
+          markEnded(real, new Date(a.at));
           scoreRules(s, real, true);
           syncActuals(s, real);
           logged.push(`${real.title} done`);

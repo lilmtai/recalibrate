@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import type { State } from "./types";
+import { historyInTable } from "./useHistory";
+import { keepHistory } from "./lib/history";
 
 export type SyncStatus = "signedout" | "syncing" | "synced" | "offline" | "error";
 
@@ -28,6 +30,7 @@ export function merge(a: State, b: State): State {
     rules: byId(older.rules, newer.rules),
     checkins: { ...older.checkins, ...newer.checkins },
     notes: byId(older.notes || [], newer.notes || []),
+    actualTomb: [...new Set([...(older.actualTomb || []), ...(newer.actualTomb || [])])],
     actuals: byId(older.actuals || [], newer.actuals || []),
     free: byId(older.free || [], newer.free || []),
     projects: byId(older.projects || [], newer.projects || []),
@@ -66,11 +69,20 @@ export function useSync(state: State, replace: (s: State) => void) {
     if (!userId) return;
     setStatus("syncing");
     const at = new Date();
-    const { error } = await supabase.from("planner_state").upsert({ user_id: userId, data: s, updated_at: at.toISOString() });
+    // once history lives in its own table, the planner copy leaves it out (keeps this row small)
+    const data = historyInTable() ? { ...s, actuals: [], actualTomb: undefined } : s;
+    const { error } = await supabase.from("planner_state").upsert({ user_id: userId, data, updated_at: at.toISOString() });
     if (error) return setStatus(navigator.onLine ? "error" : "offline");
     writeMeta({ userId, syncedAt: at.getTime() });
     setStatus("synced");
   }, [userId]);
+
+  /** History syncs separately once the table is set up; a planner copy without it must not wipe the local log. */
+  const withLocalHistory = useCallback((incoming: State): State => {
+    const local = stateRef.current;
+    const carry = historyInTable() || !(incoming.actuals || []).length;
+    return { ...incoming, actuals: carry ? keepHistory(incoming.actuals, local.actuals) : incoming.actuals, actualTomb: local.actualTomb };
+  }, []);
 
   const pull = useCallback(async () => {
     if (!userId || busy.current) return;
@@ -91,20 +103,20 @@ export function useSync(state: State, replace: (s: State) => void) {
       if (firstTimeHere) {
         if (hasData(local)) {
           const m = merge(remote, local);
-          replace(m);
+          replace(withLocalHistory(m));
           await push(m);
         } else {
-          replace(remote);
+          replace(withLocalHistory(remote));
           writeMeta({ userId, syncedAt: remoteAt });
           setStatus("synced");
         }
       } else if (remoteAt > (meta?.syncedAt || 0)) {
         if (localEdits) {
           const m = merge(remote, local);
-          replace(m);
+          replace(withLocalHistory(m));
           await push(m);
         } else {
-          replace(remote);
+          replace(withLocalHistory(remote));
           writeMeta({ userId, syncedAt: remoteAt });
           setStatus("synced");
         }
@@ -116,7 +128,7 @@ export function useSync(state: State, replace: (s: State) => void) {
     } finally {
       busy.current = false;
     }
-  }, [userId, push, replace]);
+  }, [userId, push, replace, withLocalHistory]);
 
   // pull on sign-in, when the tab regains focus, and every minute
   useEffect(() => {

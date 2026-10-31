@@ -3,7 +3,7 @@ import { CAT_LABEL, ENERGY_LABEL, INSTEAD_LABEL } from "../constants";
 import type { Task } from "../types";
 import { addDays, fmt, toMin, uid } from "../lib/time";
 import { materialize, remindLabel, rulesFor } from "../lib/plan";
-import { scoreRules } from "../lib/actions";
+import { markEnded, scoreRules } from "../lib/actions";
 import { syncActuals } from "../lib/actuals";
 import { Sheet } from "./Sheet";
 
@@ -18,6 +18,7 @@ export function LogSheet({ task }: { task: Task }) {
     update((s) => {
       const t = materialize(s, task);
       t.status = status;
+      markEnded(t);
       scoreRules(s, t, true);
       syncActuals(s, t);
       id = t.id;
@@ -43,6 +44,7 @@ export function LogSheet({ task }: { task: Task }) {
       t.actual = undefined;
       t.instead = undefined;
       t.share = undefined;
+      t.endedAt = undefined;
       syncActuals(s, t);
     });
     close();
@@ -52,7 +54,7 @@ export function LogSheet({ task }: { task: Task }) {
     .filter(Boolean).join(" · ");
   return (
     <Sheet title={task.title} onClose={close}
-      sub={<>{meta}{task.status !== "open" && <> · logged as {STATUS_LABEL[task.status]}</>}</>}>
+      sub={<>{meta}{task.startedAt && <> · started {new Date(task.startedAt).toTimeString().slice(0, 5)}</>}{task.status !== "open" && <> · logged as {STATUS_LABEL[task.status]}</>}</>}>
       {rules.length > 0 && (
         <div className="banner calm" style={{ marginTop: 14 }}>
           <b>Your rule{rules.length > 1 ? "s" : ""}:</b>

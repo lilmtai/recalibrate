@@ -5,6 +5,8 @@ import type { Actual, InsteadKey } from "../types";
 import { fmt, toMin, today } from "../lib/time";
 import { tasksFor } from "../lib/plan";
 import { logSpan, wydFrom } from "../lib/actuals";
+import { markStarted } from "../lib/actions";
+import { materialize } from "../lib/plan";
 import { Sheet } from "./Sheet";
 
 const QUICK: InsteadKey[] = ["phone", "otherwork", "people", "chores", "food", "rest", "late"];
@@ -13,7 +15,7 @@ const QUICK: InsteadKey[] = ["phone", "otherwork", "people", "chores", "food", "
  * "What are you doing?": one tap logs the stretch since your last entry (at most an hour) into My day.
  * Offers what was planned, what you logged recently, common things, or your own words.
  */
-export function WydSheet({ date, at, from: fromHint }: { date: string; at?: number; from?: number }) {
+export function WydSheet({ date, at, from: fromHint, promptKey }: { date: string; at?: number; from?: number; promptKey?: string }) {
   const { state, update, close, toast, now } = useApp();
   const to0 = at ?? (date === today() ? now : 18 * 60);
   const [from, setFrom] = useState(fmt(fromHint ?? wydFrom(state, date, to0)));
@@ -26,15 +28,21 @@ export function WydSheet({ date, at, from: fromHint }: { date: string; at?: numb
   const recent = [...new Set(state.actuals.filter((a) => a.kind !== "plan").sort((a, b) => (b.end ?? 0) - (a.end ?? 0) + b.date.localeCompare(a.date)).map((a) => a.title))]
     .filter((x) => !INSTEAD.some((i) => i.label === x)).slice(0, 5);
 
+  const already = !!promptKey && state.actuals.some((a) => a.promptKey === promptKey);
   const save = (fields: Omit<Actual, "id" | "date" | "start" | "end">) => {
     if (t <= f) return setError("The end needs to be after the start.");
-    update((s) => logSpan(s, date, f, t, fields));
+    update((s) => {
+      logSpan(s, date, f, t, { ...fields, promptKey });
+      // "I did: Gym" also records when the block really started
+      const planned = fields.taskId && tasksFor(s, date).find((x) => x.id === fields.taskId);
+      if (planned) { const d0 = new Date(`${date}T00:00:00`); d0.setMinutes(f); markStarted(materialize(s, planned), d0); }
+    });
     toast(`Logged ${from}–${to}: ${fields.title}`);
     close();
   };
 
   return (
-    <Sheet title="What were you doing?" sub="One tap logs it in My day." onClose={close}>
+    <Sheet title="What were you doing?" sub={already ? "Already answered (maybe on another device). Logging again adds nothing." : "One tap logs it in My day."} onClose={close}>
       <div className="row" style={{ alignItems: "flex-end" }}>
         <div className="field"><label htmlFor="w-from">From</label><input id="w-from" type="time" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
         <div className="field"><label htmlFor="w-to">To</label><input id="w-to" type="time" value={to} min={from} onChange={(e) => setTo(e.target.value)} /></div>

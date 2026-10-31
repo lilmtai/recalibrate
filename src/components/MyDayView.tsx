@@ -3,8 +3,10 @@ import { useApp } from "../ctx";
 import { CATEGORIES, INSTEAD } from "../constants";
 import type { Actual, InsteadKey, Task } from "../types";
 import { addDays, fmt, fmtDur, fmtShort, toMin, today, uid } from "../lib/time";
-import { tasksFor } from "../lib/plan";
+import { materialize, tasksFor } from "../lib/plan";
+import { markStarted } from "../lib/actions";
 import { actualsFor } from "../lib/actuals";
+import { fetchDay, historyInTable, KEEP_DAYS } from "../useHistory";
 import { HOUR } from "./Timeline";
 
 const QUICK: InsteadKey[] = ["phone", "otherwork", "people", "chores", "food", "rest"];
@@ -29,7 +31,14 @@ function lanesOf<T extends { id: string }>(items: T[], start: (i: T) => number, 
 export function MyDayView() {
   const { state, date, setDate, open, now } = useApp();
   const isToday = date === today();
-  const acts = actualsFor(state, date);
+  // days older than what the phone keeps come from the server (read-only)
+  const [older, setOlder] = useState<Actual[] | null>(null);
+  const isOld = date < addDays(today(), -KEEP_DAYS);
+  useEffect(() => {
+    setOlder(null);
+    if (isOld && historyInTable()) fetchDay(date).then(setOlder);
+  }, [date, isOld]);
+  const acts = isOld && older ? older : actualsFor(state, date);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [night, setNight] = useState(false);
   const hrs = state.dayHours || { start: "07:00", end: "23:00" };
@@ -152,6 +161,9 @@ function NowDoing({ current }: { current?: Task }) {
     update((s) => {
       for (const a of s.actuals) if (a.end === undefined) a.end = Math.max(a.start + 1, now);
       s.actuals.push({ id: uid(), date: today(), start: now, ...entry });
+      // starting a planned block from "now doing" records its real start
+      const t = entry.taskId && tasksFor(s, today()).find((x) => x.id === entry.taskId);
+      if (t) markStarted(materialize(s, t));
     });
     setText("");
   };

@@ -4,6 +4,7 @@ import { CATEGORIES, INSTEAD } from "../constants";
 import type { Actual, CategoryKey, InsteadKey } from "../types";
 import { fmt, toMin, uid } from "../lib/time";
 import { tasksFor } from "../lib/plan";
+import { dropActuals } from "../lib/actuals";
 import { Chips, Sheet } from "./Sheet";
 
 const INSTEAD_CAT: Partial<Record<InsteadKey, CategoryKey>> = { otherwork: "work", urgent: "work", hyperfocus: "work", people: "social", rest: "me", food: "me" };
@@ -34,7 +35,7 @@ export function EntrySheet({ date, entry, start, end }: { date: string; entry?: 
     });
     close();
   };
-  const remove = () => { update((s) => { s.actuals = s.actuals.filter((a) => a.id !== entry!.id); }); close(); };
+  const remove = () => { update((s) => dropActuals(s, (a) => a.id === entry!.id)); close(); };
 
   return (
     <Sheet title={entry ? "Edit what happened" : "What did you do?"} onClose={close}

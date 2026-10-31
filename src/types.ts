@@ -1,7 +1,8 @@
 export type Energy = "low" | "med" | "high";
 export type CategoryKey = "work" | "health" | "social" | "side" | "me";
 export type BarrierKey =
-  | "energy" | "bloated" | "overwhelm" | "time" | "forgot" | "avoid" | "sleep" | "cameup";
+  | "energy" | "bloated" | "overwhelm" | "time" | "forgot" | "avoid" | "sleep" | "cameup"
+  | "distracted" | "hardstart" | "longer" | "other";
 export type InsteadKey =
   | "phone" | "otherwork" | "urgent" | "rest" | "food" | "chores" | "people" | "hyperfocus" | "late" | "unknown";
 /** done = full block, partial = some of it, ifnot = did the "if not" fallback, skipped = removed for that day */
@@ -44,6 +45,9 @@ export interface Task {
   barrier?: BarrierKey;
   note?: string;
   routineId?: string;
+  /** when you really started / finished (ISO), recorded by Start, "I'm on it", WYD, or logging it done */
+  startedAt?: string;
+  endedAt?: string;
   /** in the reorganize tray, not on the timeline */
   unplaced?: boolean;
   /** share of the block done, for "partial" (0.25 / 0.5 / 0.75) */
@@ -107,6 +111,8 @@ export interface Actual {
   insteadKey?: InsteadKey;
   taskId?: string;
   auto?: boolean;
+  /** which prompt this answers (e.g. "wyd:2026-11-04:600"), so a prompt is logged only once */
+  promptKey?: string;
   ex?: boolean;
 }
 
@@ -183,6 +189,8 @@ export interface State {
   checkins: Record<string, CheckIn>;
   notes: Note[];
   actuals: Actual[];
+  /** ids of history entries you deleted, waiting to be marked deleted on the server */
+  actualTomb?: string[];
   free: FreeItem[];
   projects: Project[];
   steps: Step[];
