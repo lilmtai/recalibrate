@@ -83,6 +83,19 @@ Rules for every agent (Claude Code, Codex):
 - Email templates can't be edited without custom SMTP, so the emailed code isn't sent. Sign-in uses email + password instead.
   Recommended: Authentication → Sign In / Providers → Email → turn OFF "Confirm email" (or set up SMTP: Gmail app password or Resend).
 
+## Owner requests queued (do these first, in this order)
+1. **App feels mis-sized / can zoom out.** Lock the layout to the device: viewport meta with
+   `width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover` (keep `user-scalable` off),
+   `touch-action: manipulation` to stop double-tap zoom, every input/select/textarea at **16px or larger**
+   (iOS zooms when a focused field is smaller), and nothing wider than the screen (check `scrollWidth` = 390 at 390px,
+   sheets, week strip, tables, focus screen). Test in the installed iPhone app (standalone) as well as Safari.
+2. **One day view, not List + Grid.** Remove the List/Grid switch. Keep a single hour-based timeline (the Grid, which
+   Reorganize, drag, resize and tray placing need) but give its blocks the List's look: emoji pill on the left of each
+   block, title + "13:30 – 14:00 (30m)", category-colour tint, and the one-tap ✓ circle on the right; short blocks
+   must stay readable. Keep free-time "tap to plan", the now line, ongoing blocks growing, and the week strip.
+   Then delete `DayList` (move its `WeekStrip` to its own file) and the `recalibrate.dayview` setting.
+3. Then continue the roadmap: Sprint 1 P-1/P-2 (fixed vs flexible blocks, priority, deadline), then Sprint 3 "Fix my day".
+
 ## Known limits / next steps
 - iPhone web push shows no action buttons; tapping opens a one-tap question (`AskSheet`). Native buttons need the App Store build.
 - Reminders are scheduled 7 days ahead whenever the plan changes; they stop if the app isn't opened for a week.
