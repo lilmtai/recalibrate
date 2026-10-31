@@ -51,10 +51,19 @@ export function usePush(userId: string | null, state: State, update: (fn: (s: St
   /** what went wrong on the last "turn on", in plain words + the raw detail */
   const [problem, setProblem] = useState<{ hint: string; detail: string } | null>(null);
 
+  // A phone can be subscribed while Supabase never stored it (e.g. the first save failed).
+  // Whenever we're signed in, make sure this phone's subscription is saved.
   useEffect(() => {
     if (!supported) return;
-    navigator.serviceWorker.getRegistration().then((r) => r?.pushManager.getSubscription()).then((s) => setSubscribed(!!s)).catch(() => {});
-  }, [supported]);
+    (async () => {
+      const sub = await navigator.serviceWorker.getRegistration().then((r) => r?.pushManager.getSubscription()).catch(() => null);
+      setSubscribed(!!sub);
+      if (!sub || !userId) return;
+      const j = sub.toJSON();
+      const { error } = await supabase.from("push_subscriptions").upsert({ endpoint: sub.endpoint, user_id: userId, p256dh: j.keys!.p256dh, auth: j.keys!.auth });
+      if (error) setProblem({ hint: "This phone is subscribed, but Supabase couldn't save it. Run Check notifications for details.", detail: `${error.code ?? ""} ${error.message}`.trim() });
+    })();
+  }, [supported, userId]);
 
   const enable = useCallback(async (): Promise<PushResult> => {
     if (!supported) return "unsupported";

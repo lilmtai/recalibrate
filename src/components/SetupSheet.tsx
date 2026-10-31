@@ -77,7 +77,7 @@ export function SetupSheet({ install, push, signedIn, email, userId }: { install
         </Step>
       </div>
       {msg && <div className="banner calm" style={{ marginTop: 12 }}><span>{msg}</span></div>}
-      {!push.subscribed && push.problem && (
+      {push.problem && (
         <div className="banner" style={{ marginTop: 12 }}>
           <span>{push.problem.hint}</span>
           <span className="small muted" style={{ flexBasis: "100%", userSelect: "all" }}>Details: {push.problem.detail}</span>

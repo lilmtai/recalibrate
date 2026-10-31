@@ -41,8 +41,19 @@ export async function checkNotifications(userId: string | null, onUpdate: (steps
     push({ label: "Phone saved in Supabase", status: "fail", note: missing ? "The notifications tables are missing. Run supabase/push.sql in the SQL Editor." : errText(saved.error) });
     return;
   }
-  if (!saved.data) { push({ label: "Phone saved in Supabase", status: "fail", note: "Not saved. Tap Turn off on this device, then Turn on notifications again." }); return; }
-  push({ label: "Phone saved in Supabase", status: "ok" });
+  if (!saved.data) {
+    // repair: save this phone now, and show the exact reason if Supabase refuses
+    const j = sub.toJSON();
+    const fix = await supabase.from("push_subscriptions").upsert({ endpoint: sub.endpoint, user_id: userId, p256dh: j.keys!.p256dh, auth: j.keys!.auth });
+    if (fix.error) {
+      const t = errText(fix.error);
+      push({ label: "Phone saved in Supabase", status: "fail", note:
+        /row-level security|42501|permission/i.test(t) ? `Supabase refused to save it (permissions). Run supabase/push.sql again in the SQL Editor. Details: ${t}`
+        : `Supabase refused to save it. Details: ${t}` });
+      return;
+    }
+    push({ label: "Phone saved in Supabase", status: "ok", note: "It wasn't saved before; saved it now." });
+  } else push({ label: "Phone saved in Supabase", status: "ok" });
 
   const queued = await supabase.from("push_queue").select("id", { count: "exact", head: true }).eq("sent", false).gte("send_at", new Date().toISOString());
   if (queued.error) push({ label: "Reminders scheduled", status: "fail", note: errText(queued.error) });
