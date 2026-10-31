@@ -435,3 +435,12 @@ table.est .num { font-size: 12.5px; white-space: nowrap; }
 /* one-tap notification answers */
 .askbtns { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
 .btn.big { padding: 15px 18px; font-size: 16px; border-radius: 16px; }
+
+/* notification check */
+.checklist { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.checklist li { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; padding: 10px 12px; border-radius: 12px; background: var(--sunk); }
+.checklist .cdot { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--line); color: var(--muted); }
+.checklist .c-ok .cdot { background: var(--good-soft); color: var(--good); }
+.checklist .c-fail { background: var(--warn-soft); }
+.checklist .c-fail .cdot { background: var(--warn); color: var(--surface); }
+.checklist .c-wait .cdot { background: var(--gold-soft); color: var(--gold-text); }

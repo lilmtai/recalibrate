@@ -209,7 +209,7 @@ export default function App() {
       {sheet?.type === "check" && <CheckSheet task={sheet.task} />}
       {sheet?.type === "rule" && <MissSheet rule={sheet.rule} />}
       {sheet?.type === "account" && <AccountSheet sync={sync} />}
-      {sheet?.type === "setup" && <SetupSheet install={install} push={push} signedIn={!!sync.email} email={sync.email} />}
+      {sheet?.type === "setup" && <SetupSheet install={install} push={push} signedIn={!!sync.email} email={sync.email} userId={sync.userId} />}
       {sheet?.type === "entry" && <EntrySheet key={sheet.entry?.id || "new"} date={sheet.date} entry={sheet.entry} start={sheet.start} end={sheet.end} />}
       {sheet?.type === "quick" && <QuickSheet />}
       {sheet?.type === "welcome" && <WelcomeSheet />}

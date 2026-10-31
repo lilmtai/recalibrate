@@ -3,6 +3,7 @@ import { useApp } from "../ctx";
 import { DEFAULT_NOTIFY } from "../lib/push";
 import type { NotifyPrefs } from "../types";
 import type { PushResult } from "../usePwa";
+import { checkNotifications, type CheckStep } from "../lib/pushCheck";
 import { Sheet } from "./Sheet";
 
 type Install = { installed: boolean; canPrompt: boolean; install: () => Promise<void>; ios: boolean };
@@ -29,9 +30,16 @@ function Step({ n, done, title, children }: { n: number; done: boolean; title: s
 }
 
 /** Phone setup: install the app, sign in, turn on notifications that work when the app is closed. */
-export function SetupSheet({ install, push, signedIn, email }: { install: Install; push: Push; signedIn: boolean; email: string | null }) {
+export function SetupSheet({ install, push, signedIn, email, userId }: { install: Install; push: Push; signedIn: boolean; email: string | null; userId: string | null }) {
   const { state, update, close, open, toast } = useApp();
   const [msg, setMsg] = useState("");
+  const [check, setCheck] = useState<CheckStep[] | null>(null);
+  const [checking, setChecking] = useState(false);
+  const runCheck = async () => {
+    setChecking(true);
+    setCheck([]);
+    try { await checkNotifications(userId, setCheck); } finally { setChecking(false); }
+  };
   const prefs = { ...DEFAULT_NOTIFY, ...state.notify };
   const needsInstallFirst = install.ios && !install.installed;
 
@@ -90,6 +98,21 @@ export function SetupSheet({ install, push, signedIn, email }: { install: Instal
             <button className="btn" onClick={sendTest}>Send a test</button>
           </div>
         </>
+      )}
+      {check && (
+        <ul className="checklist" aria-live="polite">
+          {check.map((c, i) => (
+            <li key={i} className={`c-${c.status}`}>
+              <span className="cdot" aria-hidden="true">{c.status === "ok" ? "✓" : c.status === "fail" ? "!" : c.status === "wait" ? "…" : "–"}</span>
+              <span className="grow"><b>{c.label}</b>{c.note && <span className="small muted"> · {c.note}</span>}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {signedIn && (
+        <div className="actions" style={{ justifyContent: "flex-start" }}>
+          <button className="btn" disabled={checking} onClick={runCheck}>{checking ? "Checking…" : "Check notifications"}</button>
+        </div>
       )}
       {!push.subscribed && <div className="actions"><button className="btn" onClick={close}>Close</button></div>}
     </Sheet>
