@@ -1,4 +1,4 @@
-import type { State, Task } from "../types";
+import type { Move, State, Task } from "../types";
 import { rulesFor } from "./plan";
 import { addDays } from "./time";
 
@@ -66,4 +66,15 @@ export function startState(t: Task): "finished" | "started" | "not_started" | "o
   if (t.status === "partial" || ((t.status === "missed") && t.startedAt)) return "started";
   if (t.status === "missed") return "not_started";
   return t.startedAt ? "started" : "open";
+}
+
+/** Move a block to a new time (and length) and record the change in its history. Mutates the draft task. */
+export function moveTask(t: Task, start: string, dur: number, source: Move["source"] = "user", at: Date = new Date()) {
+  if (t.start === start && t.dur === dur) return;
+  (t.moves ||= []).push({
+    at: at.toISOString(), from: t.start, to: start, source,
+    ...(t.dur !== dur ? { fromDur: t.dur, toDur: dur } : {}),
+  });
+  t.start = start;
+  t.dur = dur;
 }

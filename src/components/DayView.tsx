@@ -8,7 +8,7 @@ import { freeDone, freeLater, markStarted } from "../lib/actions";
 import { startFocus } from "../lib/focus";
 import { isWin } from "../lib/stats";
 import { HOUR, snap, Timeline } from "./Timeline";
-import { DayList, WeekStrip } from "./DayList";
+import { WeekStrip } from "./WeekStrip";
 import { suggestEmoji } from "../lib/emoji";
 
 type TrayItem = { kind: "note" | "task" | "free"; id: string; title: string; dur: number };
@@ -22,9 +22,6 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
   const cues = cuesFor(state, date);
   const lowDay = ci.energy === "low" || (ci.sleep !== undefined && ci.sleep < 6);
   const [reorg, setReorg] = useState(false);
-  // List (like a feed) or Grid (hour by hour); Reorganize and placing from the tray use the grid
-  const [view, setViewRaw] = useState<"list" | "grid">(() => { try { return (localStorage.getItem("recalibrate.dayview") as "list" | "grid") || "list"; } catch { return "list"; } });
-  const setView = (v: "list" | "grid") => { setViewRaw(v); try { localStorage.setItem("recalibrate.dayview", v); } catch { /* ignore */ } };
   const [selected, setSelected] = useState<TrayItem | null>(null);
   const [ghost, setGhost] = useState<Ghost | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -113,7 +110,7 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
   const repeat = missedYesterday.find((m) => tasks.some((t) => norm(t.title) === norm(m.title)));
   const toLog = date <= today() ? tasks.filter((t) => needsLog(t, date, today(), now)) : [];
   const tray = unplacedFor(state, date);
-  const showList = view === "list" && !reorg && !selected;
+  const confirmMove = (t: Task) => window.confirm(`“${t.title}” is a fixed appointment. Move it anyway?`);
 
   return (
     <>
@@ -138,12 +135,6 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
           <div className="sechead">
             <h2>{parseKey(date).toLocaleDateString(undefined, { weekday: "long" })}</h2>
             <div className="row tight">
-              {!reorg && (
-                <div className="seg viewseg" role="group" aria-label="View">
-                  <button aria-pressed={view === "list"} onClick={() => setView("list")}>List</button>
-                  <button aria-pressed={view === "grid"} onClick={() => setView("grid")}>Grid</button>
-                </div>
-              )}
               <button className={`btn small ${reorg ? "primary" : ""}`} onClick={() => { setReorg(!reorg); setSelected(null); }}>
                 {reorg ? "Done reorganizing" : "Reorganize"}
               </button>
@@ -157,15 +148,15 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
             </div>
           )}
           {selected && <div className="hint placing">Tap a time on the day to place “{selected.title}”. <button className="linkbtn" onClick={() => setSelected(null)}>Cancel</button></div>}
-          {showList ? <DayList tasks={tasks} isToday={isToday} lowDay={lowDay} /> : <Timeline ref={timelineRef} tasks={tasks} cues={cues} lowDay={lowDay} isToday={isToday} reorg={reorg} onSlot={onSlot} from={from} to={to} />
-          }
-          {!showList && (night || from > 0 || to < 1440) && (
+          <Timeline ref={timelineRef} tasks={tasks} cues={cues} lowDay={lowDay} isToday={isToday} reorg={reorg} placing={!!selected}
+            onSlot={onSlot} confirmMove={confirmMove} from={from} to={to} />
+          {(night || from > 0 || to < 1440) && (
             <button className="btn ghost small nightbtn" onClick={() => setNight(!night)}>
               {night ? "Fold the night away" : `Show night hours (before ${fmt(from)}, after ${fmt(to % 1440)})`}
             </button>
           )}
-          {!tasks.length && !reorg && !showList && (
-            <div className="hint">Nothing on the timeline yet. Tap any time to add a block, or use the + button.</div>
+          {!tasks.length && !reorg && (
+            <div className="hint">A clear day. Tap any time to plan a block, or add a routine.</div>
           )}
         </section>
         <aside className="side">

@@ -10,6 +10,8 @@ const PATHS = {
   folder: <><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></>,
   clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  lock: <><rect x="5" y="11" width="14" height="10" rx="2.5" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
+  wand: <><path d="M4 20L15 9M13 7l4 4" /><path d="M18 3v3M16.5 4.5h3M20 9v2M19 10h2M10 3v2M9 4h2" /></>,
   block: <><rect x="4" y="4" width="16" height="16" rx="4" /><path d="M8 9h8M8 13h5" /></>,
   note: <><path d="M5 4h14v11l-5 5H5z" /><path d="M14 20v-5h5" /></>,
   play: <path d="M8 5.5v13l11-6.5z" />,

@@ -1,12 +1,24 @@
 import { forwardRef, useEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from "react";
 import { useApp } from "../ctx";
 import type { Cue, Task } from "../types";
-import { fmt, toMin } from "../lib/time";
+import { fmt, fmtShort, toMin } from "../lib/time";
 import { materialize, shownDur } from "../lib/plan";
+import { completeTask, moveTask, reopenTask } from "../lib/actions";
+import { syncActuals } from "../lib/actuals";
+import { suggestEmoji } from "../lib/emoji";
+import { freeGaps, layoutLanes, lenLabel } from "../lib/dayLayout";
+import { Icon } from "./Icon";
 
-export const HOUR = 56;
+/** pixels per hour */
+export const HOUR = 76;
 export const SNAP = 15;
 export const snap = (m: number) => Math.round(m / SNAP) * SNAP;
+/** shortest a block is drawn (px); a 15-minute block still gets one readable line */
+const MIN_H = 30;
+/** 30-minute blocks and up get a second line for the times; 45 minutes and up get the full layout */
+const MID = 35;
+const TALL = 52;
+const GUTTER = 52;
 
 type Drag = { id: string; mode: "move" | "resize"; y0: number; scroll0: number; start: number; dur: number; moved: boolean };
 
@@ -16,19 +28,29 @@ interface Props {
   lowDay: boolean;
   isToday: boolean;
   reorg: boolean;
-  /** when a tray item is selected, clicking an empty slot places it there */
+  /** placing something from the tray / to-dos: empty slots place it, free-time hints hide */
+  placing?: boolean;
+  /** clicking an empty slot */
   onSlot: (minute: number) => void;
+  /** asked before a fixed block is moved; return false to cancel */
+  confirmMove?: (t: Task) => boolean;
   /** visible window in minutes after midnight */
   from?: number;
   to?: number;
 }
 
-/** The whole 24-hour day in a scrolling column. In reorganize mode, blocks can be dragged and resized. */
-export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ tasks, cues, lowDay, isToday, reorg, onSlot, from = 0, to = 1440 }, innerRef) {
-  const { open, update, now, date, toast } = useApp();
+/**
+ * The day, hour by hour. Each block shows its emoji pill, times and title, with a one-tap ✓ circle.
+ * Free time between blocks says "tap to plan". In reorganize mode, blocks can be dragged and resized.
+ */
+export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline(
+  { tasks, cues, lowDay, isToday, reorg, placing, onSlot, confirmMove, from = 0, to = 1440 }, innerRef,
+) {
+  const { state, open, update, now, date, toast, celebrate } = useApp();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const y = (m: number) => ((m - from) / 60) * HOUR;
+  const minDur = (MIN_H / HOUR) * 60;
 
   // open the day scrolled to "now" (today) or the first block
   useEffect(() => {
@@ -41,32 +63,39 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ ta
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, from]);
 
-  // side-by-side lanes when blocks overlap
-  const lanes: number[] = [];
-  const lane: Record<string, number> = {};
-  for (const t of tasks) {
-    const s = toMin(t.start);
-    let i = lanes.findIndex((e) => e <= s);
-    if (i < 0) { i = lanes.length; lanes.push(0); }
-    lanes[i] = s + shownDur(t, isToday, now);
-    lane[t.id] = i;
-  }
-  const L = Math.max(1, lanes.length);
+  const spans = tasks.map((t) => ({ id: t.id, start: toMin(t.start), dur: shownDur(t, isToday, now) }));
+  const lanes = layoutLanes(spans, minDur);
 
+  // free time worth planning: inside your day hours, and (today) only from now on
+  const hrs = state.dayHours || { start: "07:00", end: "23:00" };
+  const gapFrom = Math.max(toMin(hrs.start), from, isToday ? Math.ceil(now / 15) * 15 : 0);
+  const gaps = reorg || placing ? [] : freeGaps(spans, gapFrom, Math.min(toMin(hrs.end), to), 30);
+
+  const minuteAtY = (clientY: number, el: HTMLElement) => from + Math.floor(((clientY - el.getBoundingClientRect().top) / HOUR) * 4) * 15;
   const slotClick = (e: MouseEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    onSlot(from + Math.floor(((e.clientY - rect.top) / HOUR) * 2) * 30);
+    onSlot(from + Math.floor(((e.clientY - e.currentTarget.getBoundingClientRect().top) / HOUR) * 2) * 30);
+  };
+
+  const toggle = (t: Task) => {
+    if (t.status === "missed" || t.status === "partial") return open({ type: "log", task: t });
+    const wasDone = t.status === "done" || t.status === "ifnot";
+    update((s) => {
+      const real = materialize(s, t);
+      if (wasDone) reopenTask(real); else completeTask(s, real);
+      syncActuals(s, real);
+    });
+    if (!wasDone) { celebrate(); if (t.ongoing) toast(`Finished · ${fmtShort(Math.max(5, now - toMin(t.start)))}`); }
   };
 
   // drag to move / resize (reorganize mode)
-  const down = (e: PointerEvent<HTMLButtonElement>, t: Task) => {
+  const down = (e: PointerEvent<HTMLDivElement>, t: Task) => {
     if (!reorg) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const mode = (e.target as HTMLElement).dataset.handle ? "resize" : "move";
     setDrag({ id: t.id, mode, y0: e.clientY, scroll0: scrollRef.current?.scrollTop || 0, start: toMin(t.start), dur: t.dur, moved: false });
   };
-  const move = (e: PointerEvent<HTMLButtonElement>, t: Task) => {
+  const move = (e: PointerEvent<HTMLDivElement>, t: Task) => {
     if (!drag || drag.id !== t.id) return;
     const sc = scrollRef.current!;
     const r = sc.getBoundingClientRect();
@@ -87,13 +116,11 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ ta
     if (!drag || drag.id !== t.id) return;
     const d = drag;
     setDrag(null);
+    if (d.start === toMin(t.start) && d.dur === t.dur && d.moved) return;
+    if (t.fixed && confirmMove && !confirmMove(t)) return;
     // a tap (no drag) lifts the block into the tray beside "Up next"
     if (!d.moved) return toTray(t);
-    update((s) => {
-      const real = materialize(s, t);
-      real.start = fmt(d.start);
-      real.dur = d.dur;
-    });
+    update((s) => moveTask(materialize(s, t), fmt(d.start), d.dur));
     if (t.routineId) {
       toast(`Moved for today. Keep ${fmt(d.start)} every week?`, {
         label: "Every week",
@@ -111,53 +138,81 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ ta
         {isToday && now >= from && now <= to && (
           <>
             <div className="passed" style={{ height: y(now) }} />
-            <div className="nowline" style={{ top: y(now) }} />
+            <div className="nowline" style={{ top: y(now) }}><span>{fmt(now)}</span></div>
           </>
         )}
-        {tasks.map((t) => {
-          const live = drag?.id === t.id ? drag : null;
-          const s = live ? live.start : toMin(t.start);
-          const dur = live ? live.dur : shownDur(t, isToday, now);
-          const h = Math.max(24, (dur / 60) * HOUR - 3);
-          const dim = lowDay && t.energy === "high" && t.status === "open";
-          const sub =
-            live ? `${fmt(s)}–${fmt(s + dur)} · ${dur} min`
-            : t.status === "ifnot" ? "'If not' version done"
-            : t.status === "partial" ? `Partly done${t.instead?.what.length ? " · rest went elsewhere" : ""}`
-            : t.status === "missed" ? "Missed"
-            : dim && t.ifNot ? `If not: ${t.ifNot}`
-            : `${fmt(s)}–${fmt(s + dur)}`;
-          const style = {
-            top: y(s) + 1, height: h,
-            left: `calc(56px + (100% - 64px - ${reorg ? "0px" : "30%"}) * ${lane[t.id] / L})`,
-            width: `calc((100% - 64px - ${reorg ? "0px" : "30%"}) / ${L} - 4px)`,
-            "--c": `var(--c-${t.category})`,
-          } as CSSProperties;
-          const cls = [
-            "block",
-            t.status === "done" || t.status === "ifnot" ? "done" : "",
-            t.status === "missed" ? "missed" : "",
-            t.status === "partial" ? "partial" : "",
-            dim ? "dim" : "",
-            live ? "dragging" : "",
-          ].join(" ");
+        {gaps.map((g) => {
+          const top = y(g.from) + 3;
+          const h = y(g.to) - y(g.from) - 6;
           return (
-            <button key={t.id} style={style} className={cls}
-              onClick={() => !reorg && open({ type: "log", task: t })}
-              onPointerDown={(e) => down(e, t)} onPointerMove={(e) => move(e, t)} onPointerUp={() => up(t)} onPointerCancel={() => setDrag(null)}>
-              <span className="t">
-                {t.routineId && <span className="rt" title="Routine">↻</span>}
-                {t.title}
-                {t.ex && !reorg && <span className="chip ex">example</span>}
-              </span>
-              {h > 46 && <span className="m">{sub}</span>}
-              {reorg && <span className="handle" data-handle="1" aria-hidden="true" />}
+            <button key={`gap${g.from}`} className="gapfree" style={{ top, height: h, left: GUTTER + 4 }}
+              onClick={(e) => open({ type: "block", date, start: fmt(Math.max(g.from, Math.min(g.to - 15, minuteAtY(e.clientY, e.currentTarget.parentElement!)))) })}>
+              Free · {lenLabel(g.to - g.from)} · tap to plan
             </button>
           );
         })}
         {!reorg && cues.filter((c) => c.kind === "fix" && c.at >= from && c.at <= to).map((c) => (
-          <div key={c.key} className="cue" style={{ top: y(c.at) }} title={c.text}>{fmt(c.at)} {c.text}</div>
+          <div key={c.key} className="cue" style={{ top: y(c.at) }} title={c.text}><i />{c.text}</div>
         ))}
+        {tasks.map((t) => {
+          const live = drag?.id === t.id ? drag : null;
+          const s = live ? live.start : toMin(t.start);
+          const dur = live ? live.dur : shownDur(t, isToday, now);
+          const h = Math.max(MIN_H, (dur / 60) * HOUR - 1);
+          const tall = h >= TALL;
+          const size = tall ? "tall" : h >= MID ? "mid" : "short";
+          const dim = lowDay && t.energy === "high" && t.status === "open";
+          const done = t.status === "done" || t.status === "ifnot";
+          const running = state.focus?.taskId === t.id;
+          const emoji = t.emoji || suggestEmoji(t.title, t.category, state);
+          const { lane, of } = lanes[t.id] || { lane: 0, of: 1 };
+          const meta =
+            t.ongoing && t.status === "open" && !live
+              ? `${t.start} – ongoing${isToday && now > s ? ` (${lenLabel(now - s)} so far)` : ""}`
+              : `${fmt(s)} – ${fmt(s + dur)} (${lenLabel(dur)})`;
+          const note =
+            running ? <span className="bnote gold">Focusing now</span>
+            : t.status === "missed" ? <span className="bnote warn">Didn't happen{t.barrier ? "" : " · tap to log why"}</span>
+            : t.status === "partial" ? <span className="bnote">Partly done</span>
+            : t.status === "ifnot" ? <span className="bnote">“If not” version done</span>
+            : dim && t.ifNot ? <span className="bnote">If not: {t.ifNot}</span>
+            : null;
+          const style = {
+            top: y(s) + 1, height: h,
+            left: `calc(${GUTTER}px + (100% - ${GUTTER + 6}px) * ${lane / of})`,
+            width: `calc((100% - ${GUTTER + 6}px) / ${of} - 3px)`,
+            "--c": `var(--c-${t.category})`,
+          } as CSSProperties;
+          const cls = [
+            "block", size, `s-${t.status}`,
+            dim ? "dim" : "", running ? "running" : "", live ? "dragging" : "", of > 1 ? "narrow" : "",
+          ].join(" ");
+          return (
+            <div key={t.id} style={style} className={cls}
+              onPointerDown={(e) => down(e, t)} onPointerMove={(e) => move(e, t)} onPointerUp={() => up(t)} onPointerCancel={() => setDrag(null)}>
+              <span className="bpill" aria-hidden="true">{emoji}</span>
+              <button className="bbody" tabIndex={reorg ? -1 : 0} onClick={() => !reorg && open({ type: "log", task: t })}
+                aria-label={reorg ? undefined : `${t.title}, ${meta}`}>
+                {tall && <span className="bmeta">{meta}{t.routineId && " · ↻"}</span>}
+                <span className="btitle">
+                  {t.fixed && <Icon name="lock" size={12} stroke={2.4} />}
+                  {t.priority === "high" && <span className="prio" title="High priority">!</span>}
+                  {t.title}
+                  {t.ex && !reorg && <span className="chip ex">example</span>}
+                </span>
+                {!tall && <span className="bmeta">{meta}{size === "mid" && t.routineId && " · ↻"}</span>}
+                {tall && h >= 74 && note}
+              </button>
+              {!reorg && (
+                <button className={`bcheck ${done ? "on" : ""} ${t.status === "missed" ? "miss" : ""}`} onClick={() => toggle(t)}
+                  aria-label={done ? `Mark ${t.title} not done` : t.ongoing ? `Finish ${t.title} now` : `Mark ${t.title} done`}>
+                  {done && <Icon name="check" size={tall ? 16 : 14} stroke={3} />}
+                </button>
+              )}
+              {reorg && <span className="handle" data-handle="1" aria-hidden="true" />}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

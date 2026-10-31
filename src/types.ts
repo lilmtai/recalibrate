@@ -40,7 +40,44 @@ export interface Note {
   ex?: boolean;
 }
 
-export interface Task {
+export type Priority = "low" | "normal" | "high";
+export type Difficulty = "easy" | "medium" | "hard";
+
+/**
+ * Planning details shared by blocks and routines (P-1 / P-2). All optional: an empty field means the
+ * default (flexible, normal priority, can be postponed), so the quick form stays quick.
+ */
+export interface PlanFields {
+  /** fixed = an appointment: keeps its time; moving it asks first, "Fix my day" never moves it */
+  fixed?: boolean;
+  priority?: Priority;
+  /** last day it can happen (YYYY-MM-DD) */
+  deadline?: string;
+  /** how hard it is to get going */
+  difficulty?: Difficulty;
+  /** shortest useful version, in minutes */
+  minDur?: number;
+  /** true = has to happen today, never postponed to another day */
+  noPostpone?: boolean;
+  /** essential care (meals, meds, sleep prep): kept in a minimum day */
+  essential?: boolean;
+  desc?: string;
+}
+
+/** One change to a block's time (schedule history, R-5). */
+export interface Move {
+  /** ISO time of the change */
+  at: string;
+  from: string; // HH:MM
+  to: string; // HH:MM, or "" when taken off the day
+  fromDur?: number;
+  toDur?: number;
+  /** moved to another day */
+  toDate?: string;
+  source: "user" | "recovery";
+}
+
+export interface Task extends PlanFields {
   id: string;
   date: string; // YYYY-MM-DD
   title: string;
@@ -69,11 +106,13 @@ export interface Task {
   share?: number;
   instead?: Instead;
   checks?: Check[];
+  /** every change to its time, oldest first */
+  moves?: Move[];
   ex?: boolean;
 }
 
 /** A sticky block: repeats on the chosen weekdays (0 = Monday … 6 = Sunday). */
-export interface Routine {
+export interface Routine extends PlanFields {
   id: string;
   title: string;
   start: string;

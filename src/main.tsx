@@ -5,6 +5,8 @@ import "./index.css";
 import { lockZoom } from "./lib/zoom";
 
 lockZoom();
+// the old List / Grid setting is gone (one day view now)
+try { localStorage.removeItem("recalibrate.dayview"); } catch { /* ignore */ }
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
