@@ -1,18 +1,18 @@
 # Product requirements and current status
 
 Status: **Done** · **Partial** (exists but short of the spec) · **Missing**.
-Audit date: 2026-10-31 (commit `6b1f534`); updated after Sprint 0. Priorities P0 / P1 / P2 from the product spec.
+Audit date: 2026-10-31 (commit `6b1f534`); updated after Sprint 0, Sprint 1 P-1/P-2 and Sprint 3. Priorities P0 / P1 / P2 from the product spec.
 Backlog items in `ROADMAP.md` reference these IDs.
 
 ## Module 1 · Daily planner (P0)
 
 | ID | Requirement | Status | Notes / where |
 | --- | --- | --- | --- |
-| DP-1 | Block types: **fixed**, **flexible**, **floating** | Partial | Flexible = timed blocks (`Task`). Floating = to-dos (`Note`) and free blocks (`FreeItem`). No "fixed" flag; nothing stops moving an appointment. |
-| DP-2 | Block fields: title, description, start/end, est. duration, priority, category, energy, starting difficulty, recurrence, deadline, minimum acceptable duration, can-postpone | Partial | Have: title, start, finish/duration, category (5 areas), energy, "if not" fallback (≈ minimum version), weekly recurrence (routines). Missing: description, priority, starting difficulty, deadline, minimum duration in minutes, can-postpone. |
-| DP-3 | Don't fit a 60-min task in a 20-min gap | Missing | No constraint engine; blocks can overlap freely. |
-| DP-4 | Transition buffers around high-focus blocks | Missing | |
-| DP-5 | Fixed appointments preserved | Missing | Depends on DP-1. |
+| DP-1 | Block types: **fixed**, **flexible**, **floating** | Done | Block form has Flexible / Fixed (`Task.fixed`, `Routine.fixed`). Fixed blocks show a lock; dragging one asks first. Floating = to-dos (`Note`) and free blocks (`FreeItem`). |
+| DP-2 | Block fields: title, description, start/end, est. duration, priority, category, energy, starting difficulty, recurrence, deadline, minimum acceptable duration, can-postpone | Done | All present. Behind "More" in the block form: priority, deadline, starting difficulty, minimum version (minutes), "has to happen today" (= can't postpone), essential care, notes (`PlanFields` in `types.ts`). |
+| DP-3 | Don't fit a 60-min task in a 20-min gap | Partial | The engine (`lib/schedule.ts → earliestFit`) never proposes a block in a gap shorter than it. Manual drags can still overlap (allowed, shown side by side). |
+| DP-4 | Transition buffers around high-focus blocks | Partial | "Fix my day" keeps 10 min free after a 60+ min high-energy or hard block. Not yet shown in manual planning. |
+| DP-5 | Fixed appointments preserved | Done | The engine never moves fixed blocks; Reorganize asks before moving one. |
 | DP-6 | Recurring tasks never silently disappear | Done | Routines are generated per day (`tasksFor`); edits ask "this day / every week". |
 | DP-7 | No automatic overflow of unfinished work into tomorrow | Done | Nothing rolls over. Old unfinished to-dos wait in "N unfinished from before · Review" (`ReviewSheet`): today / pick a day / drop. |
 | DP-8 | Daily capacity limited by realistic available time | Missing | Day hours exist (`dayHours`), not used for capacity. |
@@ -57,10 +57,10 @@ Backlog items in `ROADMAP.md` reference these IDs.
 
 | ID | Requirement | Status | Notes / where |
 | --- | --- | --- | --- |
-| RE-1 | Recompute the rest of the day from remaining time, fixed commitments, priorities, deadlines, durations, energy, buffers | Missing | Manual tools only: Reorganize (drag, resize), tray, "clear the rest of today". |
-| RE-2 | Scenario handling (late start, overrun, missed gym, low energy, new appointment, too much left) | Partial | Low-energy day dims high-energy blocks and shows "if not" versions; "never miss twice" banner. Nothing proposes a new schedule. |
-| RE-3 | **Minimum viable day** button | Missing | |
-| RE-4 | Proposal + approval UI ("Approve" / "Edit") | Missing | |
+| RE-1 | Recompute the rest of the day from remaining time, fixed commitments, priorities, deadlines, durations, energy, buffers | Done | `proposeRecovery` in `lib/schedule.ts` (deterministic, unit-tested). Manual tools remain: Reorganize, tray, "clear the rest of today". |
+| RE-2 | Scenario handling (late start, overrun, missed gym, low energy, new appointment, too much left) | Done | All six are unit-tested. Today offers "Fix my day" (never applies it) after a 30+ min overrun, two slipped blocks, or a low-energy check-in. |
+| RE-3 | **Minimum viable day** button | Done | "Minimum day" in the Fix my day panel: keeps fixed, essential and "has to happen today" blocks plus the one top task; the rest goes to the tray (routines: skipped today). |
+| RE-4 | Proposal + approval UI ("Approve" / "Edit") | Done | `RecoverSheet`: before → after with a reason per change, untick any change (edit), Approve / Dismiss. |
 
 ## Module 6 · Behaviour intelligence (P1)
 
@@ -71,7 +71,7 @@ Backlog items in `ROADMAP.md` reference these IDs.
 | BI-3 | Average starting delay | Missing | Needs TA-5. |
 | BI-4 | Average task duration / estimated vs actual | Done | |
 | BI-5 | Most common interruption reasons | Done | "Why things didn't happen", "Where the time went instead". |
-| BI-6 | Rescheduling frequency | Missing | Needs schedule change history (DM rule 4). |
+| BI-6 | Rescheduling frequency | Partial | History is recorded (`Task.moves`: drags, edits, tray, Fix my day); the metric isn't shown yet. |
 | BI-7 | Weekly consistency (not streaks) | Missing | |
 | BI-8 | Pattern detection written as observations, not causes | Partial | "What the data says" covers sleep, energy, area, barriers, estimates, drift. Wording mostly avoids claiming causes. |
 | BI-9 | Personal experiments with tracked results | Partial | **Playbook rules** (if-then fixes with "worked X of Y") are an early form. No proposed experiments or start/end dates. |

@@ -681,3 +681,29 @@ table.est .num { font-size: 12.5px; white-space: nowrap; }
 /* iPhone zooms into any focused field smaller than 16px: keep every field at 16px or more. */
 input, select, textarea { font-size: 16px !important; }
 .codeinput { font-size: 24px !important; }
+
+/* block form: kind + "More" */
+.kindseg button { display: inline-flex; align-items: center; gap: 5px; padding: 8px 18px; }
+.morebtn { margin-top: 16px; display: block; }
+.moregroup { margin-top: 4px; padding: 2px 14px 14px; border-radius: 14px; background: var(--sunk); }
+.moregroup .field input, .moregroup .field textarea { background: var(--surface); }
+
+/* Fix my day */
+.fixbtn { display: inline-flex; align-items: center; gap: 5px; border-color: var(--gold); }
+.fixbanner .row { flex-basis: 100%; flex-wrap: wrap; }
+.fixbanner .btn.primary { display: inline-flex; align-items: center; gap: 5px; }
+.recoverseg { margin-top: 12px; }
+.recover-keep { display: flex; gap: 8px; align-items: flex-start; margin-top: 14px; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft); font-size: 14px; }
+.recover-keep svg { flex: none; margin-top: 3px; color: var(--accent-text); }
+.recover-empty { padding: 24px 0 8px; }
+.recoverlist { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.recoverlist li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
+.recoverlist .bpill { flex: none; width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; font-size: 18px; background: color-mix(in srgb, var(--c) 18%, var(--surface)); }
+.recoverlist .rtitle { font-weight: 700; overflow-wrap: anywhere; }
+.recoverlist .rmove { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: 14px; margin: 2px 0; }
+.recoverlist .rmove s { color: var(--faint); }
+.recoverlist .rmove b { color: var(--accent-text); }
+.recoverlist input[type="checkbox"] { flex: none; width: 22px; height: 22px; margin-top: 6px; accent-color: var(--accent); }
+.recoverlist li.offc { opacity: .55; }
+.recoverlist li.k-nofit { border-style: dashed; border-color: var(--warn); background: var(--warn-soft); }
+.recoverlist li.k-nofit .rmove b { color: var(--warn); }

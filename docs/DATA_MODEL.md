@@ -8,7 +8,9 @@ synced as **one JSON row per user** (`planner_state`) in Supabase. Arrays are me
 
 | Current type | Role | Spec entity it maps to |
 | --- | --- | --- |
-| `Task` | A scheduled block on a date (time, duration, category, energy, "if not", outcome, reason, what-instead, check-ins, actual minutes) | **Task + ScheduleBlock + part of ExecutionLog**, all in one record |
+| `Task` | A scheduled block on a date (time, duration, category, energy, "if not", outcome, reason, what-instead, check-ins, actual minutes, plan fields, `moves`) | **Task + ScheduleBlock + part of ExecutionLog**, all in one record |
+| `PlanFields` (on `Task` and `Routine`) | `fixed`, `priority`, `deadline`, `difficulty`, `minDur`, `noPostpone`, `essential`, `desc`; all optional, empty = default | Task fields (kind, priority, deadline, …) |
+| `Task.moves` (`Move[]`) | Every change to a block's time: from → to, length, other day, source user / recovery, when | **schedule_change** (local for now) |
 | `Routine` | Weekly repeating block; instances are *virtual* until touched (`tasksFor`, ids `rt:<routineId>:<date>`) | Task + **RecurrenceRule** |
 | `FreeItem` | Floating task that repeats every N days, with next due and reminder time | Floating Task + RecurrenceRule |
 | `Note` | Post-it to-do with no time | Floating Task (and today, also the distraction inbox) |
@@ -17,7 +19,7 @@ synced as **one JSON row per user** (`planner_state`) in Supabase. Arrays are me
 | `Rule` | If-then fix from a miss, with reminder and win/fail score | Early **Experiment** |
 | `Project`, `Step`, `Page` | Work tab: projects, steps, journal / drafts / goals | (beyond spec) Project, Subtask, Note |
 | `NotifyPrefs`, `dayHours` | Preferences | User |
-| — | — | **Distraction**, **AIRecommendation**, schedule change history: *not modelled yet* |
+| — | — | **Distraction**, **AIRecommendation**: *not modelled yet* |
 
 Server tables: `planner_state` (the JSON row), `push_subscriptions`, `push_queue`, and **`execution_log`**
 (`supabase/history.sql`): one row per "what really happened" entry, soft-deleted, unique per prompt.
@@ -28,7 +30,8 @@ Until `history.sql` is run, history stays inside `planner_state` ("blob" mode); 
 
 Status after Sprint 0: **1 fixed** (41 unit tests incl. a two-device sync simulation), **2 fixed for history**
 (the log lives in `execution_log`, 60 days on the phone), **4 partly** (soft deletes; edits still overwrite),
-**6 fixed** (one answer per prompt via `prompt_key`). 3 and 5 remain.
+**6 fixed** (one answer per prompt via `prompt_key`). **3 partly**: reschedules are now recorded in `Task.moves`
+(drag, edit, tray, Fix my day), but the block itself is still moved in place. 5 remains.
 
 
 1. **No tests.** Scheduling, recurrence, stats and sync merge are pure functions with no test coverage.

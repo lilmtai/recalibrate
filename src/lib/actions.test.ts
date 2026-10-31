@@ -64,3 +64,15 @@ describe("one-tap done and ongoing blocks", () => {
     expect(t.status).toBe("open");
   });
 });
+
+describe("moveTask (schedule history)", () => {
+  it("records from → to with the source, and nothing when the time doesn't change", async () => {
+    const { moveTask } = await import("./actions");
+    const t = task({ id: "a", start: "09:00", dur: 60 });
+    moveTask(t, "09:00", 60);
+    expect(t).not.toHaveProperty("moves");
+    moveTask(t, "10:00", 45, "user", new Date(2026, 10, 4, 8));
+    expect(t.start).toBe("10:00");
+    expect(t.moves).toEqual([{ at: new Date(2026, 10, 4, 8).toISOString(), from: "09:00", to: "10:00", fromDur: 60, toDur: 45, source: "user" }]);
+  });
+});

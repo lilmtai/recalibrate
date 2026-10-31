@@ -1,12 +1,21 @@
 import { useState } from "react";
 import { useApp } from "../ctx";
 import { categoriesOf, ENERGY_LABEL } from "../constants";
-import type { CategoryKey, Energy, Routine, Task } from "../types";
+import type { CategoryKey, Difficulty, Energy, Priority, Routine, Task } from "../types";
 import { DAY_SHORT, fmt, longDate, nowMin, toMin, today, uid, weekday } from "../lib/time";
 import { materialize } from "../lib/plan";
+import { moveTask } from "../lib/actions";
 import { EMOJI_PICKS, suggestEmoji } from "../lib/emoji";
 import { multiplier } from "../lib/stats";
 import { Chips, Sheet } from "./Sheet";
+import { Icon } from "./Icon";
+
+const PRIORITY_OPTS: { key: Priority; label: string }[] = [
+  { key: "low", label: "Low" }, { key: "normal", label: "Normal" }, { key: "high", label: "High" },
+];
+const DIFF_OPTS: { key: Difficulty | "none"; label: string }[] = [
+  { key: "none", label: "Not set" }, { key: "easy", label: "Easy" }, { key: "medium", label: "Medium" }, { key: "hard", label: "Hard" },
+];
 
 const ENERGY_OPTS: { key: Energy | "none"; label: string }[] = [
   { key: "none", label: "Not set" },
@@ -34,6 +43,17 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
   const [ifNot, setIfNot] = useState(src?.ifNot || "");
   const [repeat, setRepeat] = useState(!!routineMode);
   const [days, setDays] = useState<number[]>(routine?.days || (date ? [weekday(date)] : [0, 1, 2, 3, 4]));
+  // P-1 / P-2: fixed vs flexible up front; the rest waits behind "More"
+  const [fixed, setFixed] = useState(!!src?.fixed);
+  const [priority, setPriority] = useState<Priority>(src?.priority || "normal");
+  const [deadline, setDeadline] = useState(src?.deadline || "");
+  const [difficulty, setDifficulty] = useState<Difficulty | "none">(src?.difficulty || "none");
+  const [minDur, setMinDur] = useState(src?.minDur ? String(src.minDur) : "");
+  const [mustToday, setMustToday] = useState(!!src?.noPostpone);
+  const [essential, setEssential] = useState(!!src?.essential);
+  const [desc, setDesc] = useState(src?.desc || "");
+  const hasMore = !!(src?.priority && src.priority !== "normal") || !!src?.deadline || !!src?.difficulty || !!src?.minDur || !!src?.noPostpone || !!src?.essential || !!src?.desc;
+  const [more, setMore] = useState(hasMore);
   const [error, setError] = useState("");
   const mx = multiplier(state);
 
@@ -67,7 +87,21 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
     if (hasEnd && end && toMin(end) <= toMin(start)) return setError(`The finish has to be after the start (${start}).`);
     if (isRoutine && !days.length) return setError("Pick at least one day for the routine.");
     const d = hasEnd ? Math.max(5, +dur || 30) : 30; // ongoing: 30 is only for drawing until it's finished
+    const md = +minDur > 0 ? Math.min(+minDur, d) : undefined;
+    if (deadline && date && deadline < date && !isRoutine) return setError("The deadline is before this day. Pick a later deadline or clear it.");
+    // undefined = default, so stored blocks stay small and old ones keep working
+    const plan = {
+      fixed: fixed || undefined,
+      priority: priority === "normal" ? undefined : priority,
+      deadline: deadline || undefined,
+      difficulty: difficulty === "none" ? undefined : difficulty,
+      minDur: md && md < d ? md : undefined,
+      noPostpone: mustToday || undefined,
+      essential: essential || undefined,
+      desc: desc.trim() || undefined,
+    };
     const data = {
+      ...plan,
       title: title.trim(), start, dur: d, category,
       emoji: emoji || suggestEmoji(title.trim(), category, state),
       ongoing: hasEnd ? undefined : true,
@@ -85,7 +119,9 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
         const real = s.tasks.find((x) => x.id === task.id);
         if (real) Object.assign(real, data);
       } else if (task) {
-        Object.assign(materialize(s, task), data);
+        const real = materialize(s, task);
+        moveTask(real, data.start, data.dur); // records the change in its history, if any
+        Object.assign(real, data);
       } else {
         s.tasks.push({ id: uid(), date: date!, status: "open", ...data });
       }
@@ -131,6 +167,14 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
         <Chips options={categoriesOf(state).map((c) => ({ key: c.key, label: `${c.emoji} ${c.label}`, color: `var(--c-${c.key})` }))} value={category} onChange={setCategory} />
         <button type="button" className="linkbtn small" style={{ alignSelf: "flex-start", marginTop: 4 }} onClick={() => open({ type: "categories" })}>Edit categories</button></div>
 
+      <div className="field"><span>Kind</span>
+        <div className="seg kindseg" role="group" aria-label="Kind of block">
+          <button type="button" aria-pressed={!fixed} onClick={() => setFixed(false)}>Flexible</button>
+          <button type="button" aria-pressed={fixed} onClick={() => setFixed(true)}><Icon name="lock" size={13} stroke={2.4} /> Fixed</button>
+        </div>
+        <span className="hint" style={{ marginTop: 0 }}>{fixed ? "An appointment: it keeps its time. Moving it asks first, and “Fix my day” never moves it." : "Can move if your day changes. “Fix my day” may suggest a new time."}</span>
+      </div>
+
       <div className="row">
         <div className="field"><label htmlFor="b-start">Start</label>
           <input id="b-start" type="time" value={start} onChange={(e) => onStart(e.target.value)} /></div>
@@ -156,6 +200,33 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
 
       <div className="field"><label htmlFor="b-ifnot">If not… <span className="opt">your fallback on a bad day</span></label>
         <input id="b-ifnot" value={ifNot} onChange={(e) => setIfNot(e.target.value)} placeholder="20-minute walk" /></div>
+
+      <button type="button" className="linkbtn small morebtn" aria-expanded={more} onClick={() => setMore(!more)}>
+        {more ? "Fewer details" : "More: priority, deadline, minimum…"}
+      </button>
+      {more && (
+        <div className="moregroup">
+          <div className="field"><span>Priority</span>
+            <Chips options={PRIORITY_OPTS} value={priority} onChange={setPriority} /></div>
+          {!isRoutine && (
+            <div className="field"><label htmlFor="b-deadline">Deadline <span className="opt">last day it can happen</span></label>
+              <div className="row tight">
+                <input id="b-deadline" type="date" value={deadline} min={date} onChange={(e) => setDeadline(e.target.value)} />
+                {deadline && <button type="button" className="btn ghost small" onClick={() => setDeadline("")}>Clear</button>}
+              </div></div>
+          )}
+          <div className="field"><span>Getting started is…</span>
+            <Chips options={DIFF_OPTS} value={difficulty} onChange={setDifficulty} /></div>
+          <div className="field"><label htmlFor="b-min">Minimum version <span className="opt">minutes that still count</span></label>
+            <input id="b-min" type="number" min="5" step="5" inputMode="numeric" value={minDur} placeholder="e.g. 15" onChange={(e) => setMinDur(e.target.value)} /></div>
+          <label className="toggle"><input type="checkbox" checked={mustToday} onChange={(e) => setMustToday(e.target.checked)} />
+            <span>Has to happen {isRoutine ? "on its day" : "today"} <span className="opt">never postponed to another day</span></span></label>
+          <label className="toggle"><input type="checkbox" checked={essential} onChange={(e) => setEssential(e.target.checked)} />
+            <span>Essential care <span className="opt">meals, meds, sleep prep: kept in a minimum day</span></span></label>
+          <div className="field"><label htmlFor="b-desc">Notes <span className="opt">optional</span></label>
+            <textarea id="b-desc" rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Details, links, the first step…" /></div>
+        </div>
+      )}
 
       {!task && !routine && !routineMode && (
         <div className="field"><span>Repeat</span>

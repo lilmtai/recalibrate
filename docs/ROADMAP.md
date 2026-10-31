@@ -28,7 +28,7 @@ and acceptance criteria (AC). An item is done when every AC is met, tests pass, 
   and keeps only the last 30 days locally.
 - AC: answering the same WYD on two devices produces one entry.
 
-## Sprint 1 · Planning foundation (P0)
+## Sprint 1 · Planning foundation (P0) · P-1, P-2 done; P-5 partly (inside "Fix my day"); P-3, P-4, P-6 open
 
 **P-1 · Block kinds: fixed / flexible / floating** (DP-1, DP-5)
 - AC: new-block form has Fixed / Flexible; floating = to-dos and free blocks.
@@ -77,7 +77,7 @@ and acceptance criteria (AC). An item is done when every AC is met, tests pass, 
 **E-6 · Overtime check** (TA-7)
 - AC: when a running block ends, "Need more time? +10 / +30 / Done" (one tap); extension is recorded.
 
-## Sprint 3 · Recovery (P0, the differentiator)
+## Sprint 3 · Recovery (P0, the differentiator) · ✅ R-1…R-4 done, R-5 done locally (server table later)
 
 **R-1 · Recovery engine** (RE-1, SCHEDULING_RULES → Recovery)
 - AC: deterministic `proposeRecovery(day, now)` returns moves with reasons; full unit tests for the six

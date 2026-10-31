@@ -4,11 +4,13 @@ import { BARRIER_LABEL, INSTEAD_LABEL } from "../constants";
 import type { Task } from "../types";
 import { addDays, DAY_SHORT, fmt, fmtDur, norm, nowMin, parseKey, toMin, today, uid, weekday } from "../lib/time";
 import { cuesFor, everyLabel, freeDue, materialize, needsLog, notesFor, notesToReview, tasksFor, unplacedFor } from "../lib/plan";
-import { freeDone, freeLater, markStarted } from "../lib/actions";
+import { freeDone, freeLater, markStarted, moveTask } from "../lib/actions";
 import { startFocus } from "../lib/focus";
 import { isWin } from "../lib/stats";
 import { HOUR, snap, Timeline } from "./Timeline";
 import { WeekStrip } from "./WeekStrip";
+import { recoveryTrigger } from "../lib/schedule";
+import { Icon } from "./Icon";
 import { suggestEmoji } from "../lib/emoji";
 
 type TrayItem = { kind: "note" | "task" | "free"; id: string; title: string; dur: number };
@@ -48,7 +50,7 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
         s.tasks.push({ id: uid(), date, title: item.title, start, dur: item.dur, category: "work", status: "open" });
       } else {
         const t = s.tasks.find((x) => x.id === item.id);
-        if (t) { t.start = start; t.unplaced = false; }
+        if (t) { moveTask(t, start, t.dur); t.unplaced = false; }
       }
     });
     setSelected(null);
@@ -110,6 +112,11 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
   const repeat = missedYesterday.find((m) => tasks.some((t) => norm(t.title) === norm(m.title)));
   const toLog = date <= today() ? tasks.filter((t) => needsLog(t, date, today(), now)) : [];
   const tray = unplacedFor(state, date);
+  // offer "Fix my day" when the day slips (never applied without approval); "Not now" hides it until tomorrow
+  const [quiet, setQuiet] = useState<string | null>(() => { try { return localStorage.getItem("recalibrate.fixquiet"); } catch { return null; } });
+  const trigger = isToday && quiet !== date ? recoveryTrigger(tasks, now, { lowEnergy: lowDay, runningId: state.focus?.taskId }) : null;
+  const hush = () => { setQuiet(date); try { localStorage.setItem("recalibrate.fixquiet", date); } catch { /* ignore */ } };
+  const canFix = date >= today() && tasks.some((t) => t.status === "open");
   const confirmMove = (t: Task) => window.confirm(`“${t.title}” is a fixed appointment. Move it anyway?`);
 
   return (
@@ -118,7 +125,17 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
 
       <CheckinRow date={date} isToday={isToday} tasks={tasks} notificationsOn={notificationsOn} />
 
-      {toLog.length > 0 ? (
+      {trigger && canFix ? (
+        <div className="banner calm fixbanner">
+          <b>Day slipping?</b>
+          <span>{trigger} One tap shows a plan that fits; nothing changes until you approve.</span>
+          <div className="row tight">
+            <button className="btn small primary" onClick={() => open({ type: "recover", date })}><Icon name="wand" size={14} /> Fix my day</button>
+            {toLog.length > 0 && <button className="btn small" onClick={() => open({ type: "log", task: toLog[0] })}>Log “{toLog[0].title}”</button>}
+            <button className="btn small ghost" onClick={hush}>Not now</button>
+          </div>
+        </div>
+      ) : toLog.length > 0 ? (
         <div className="banner">
           <b>{toLog.length} block{toLog.length > 1 ? "s" : ""} ended without a log.</b>
           <span>Logging what really happened takes a few seconds and shows where your time goes.</span>
@@ -138,6 +155,7 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
               <button className={`btn small ${reorg ? "primary" : ""}`} onClick={() => { setReorg(!reorg); setSelected(null); }}>
                 {reorg ? "Done reorganizing" : "Reorganize"}
               </button>
+              {!reorg && canFix && <button className="btn small fixbtn" onClick={() => open({ type: "recover", date })}><Icon name="wand" size={14} /> Fix my day</button>}
               {!reorg && <button className="btn primary small" onClick={() => open({ type: "block", date })}>Add block</button>}
             </div>
           </div>

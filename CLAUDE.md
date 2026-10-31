@@ -29,6 +29,11 @@ Rules for every agent (Claude Code, Codex):
 - `src/ctx.ts`: app context + `SheetState` union (every pop-up panel) + `Tab` (`day | myday | work | week | patterns | playbook | me`).
   Bottom tabs: Today, My day, Work, Week (Plan / Insights / Playbook switch), Me.
 - `src/types.ts`: data model (`State`, `Task`, `Routine`, `Rule`, `Note`, `Actual`, `CheckIn`, `FreeItem`, `Project`, `Step`, `Page`, `NotifyPrefs`).
+  `PlanFields` (fixed, priority, deadline, difficulty, minDur, noPostpone, essential, desc) on blocks and routines, set in
+  `BlockSheet` (Flexible / Fixed up top, the rest behind "More"). `Task.moves` = schedule history (`moveTask` in `lib/actions.ts`).
+- `src/lib/schedule.ts`: the deterministic engine (tested): `proposeRecovery` ("Fix my day" / "Minimum day"),
+  `applyRecovery`, `recoveryTrigger` (when Today offers it), `earliestFit`. UI: `components/RecoverSheet.tsx`
+  (before → after, reasons, untick, Approve / Dismiss), "Fix my day" button + "Day slipping?" banner in `DayView`.
 - `src/store.ts`: load/save/migrate state; `update(fn)` edits a structuredClone draft and stamps `updatedAt`.
 - `src/sync.ts`: Supabase auth (password, email code, link) + sync of one `planner_state` row per user; merges on conflict.
 - `src/usePwa.ts`: install prompt, push subscription, uploads the next 7 days of reminders to `push_queue`.
@@ -88,13 +93,13 @@ Rules for every agent (Claude Code, Codex):
   Recommended: Authentication → Sign In / Providers → Email → turn OFF "Confirm email" (or set up SMTP: Gmail app password or Resend).
 
 ## Owner requests queued
-Done: sizing/zoom lock, one day view. Next: the roadmap (see `docs/ROADMAP.md`).
+Done: sizing/zoom lock, one day view, fixed/flexible + priority/deadline, Fix my day. Next: the roadmap (see `docs/ROADMAP.md`).
 
 ## Known limits / next steps
 - iPhone web push shows no action buttons; tapping opens a one-tap question (`AskSheet`). Native buttons need the App Store build.
 - Reminders are scheduled 7 days ahead whenever the plan changes; they stop if the app isn't opened for a week.
-- Next: see `docs/ROADMAP.md`. Done: Sprint 0, Sprint 2 E-1/E-2/E-6. Next up: Sprint 1 P-1/P-2 (fixed blocks, priority,
-  deadline) then Sprint 3 recovery ("Fix my day", minimum viable day), then the remaining Sprint 2 items.
+- Next: see `docs/ROADMAP.md`. Done: Sprint 0, Sprint 1 P-1/P-2, Sprint 2 E-1/E-2/E-6, Sprint 3 (Fix my day, minimum day).
+  Next up: Sprint 1 P-3/P-4 (capacity indicator, overload warning; reuse `lib/schedule.ts`), P-6, then Sprint 2 E-3/E-4/E-5.
 
 ## Conventions
 - Commit to `main` only when asked; deploy is automatic. End commit messages with the session's attribution lines.

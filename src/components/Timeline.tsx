@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from "react";
 import { useApp } from "../ctx";
 import type { Cue, Task } from "../types";
-import { fmt, fmtShort, toMin } from "../lib/time";
+import { fmt, fmtShort, parseKey, toMin } from "../lib/time";
 import { materialize, shownDur } from "../lib/plan";
 import { completeTask, moveTask, reopenTask } from "../lib/actions";
 import { syncActuals } from "../lib/actuals";
@@ -128,7 +128,11 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline(
       });
     }
   };
-  const toTray = (t: Task) => update((s) => { materialize(s, t).unplaced = true; });
+  const toTray = (t: Task) => update((s) => {
+    const real = materialize(s, t);
+    (real.moves ||= []).push({ at: new Date().toISOString(), from: real.start, to: "", source: "user" });
+    real.unplaced = true;
+  });
 
   const hours = Array.from({ length: (to - from) / 60 + 1 }, (_, h) => from + h * 60);
   return (
@@ -176,6 +180,7 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline(
             : t.status === "partial" ? <span className="bnote">Partly done</span>
             : t.status === "ifnot" ? <span className="bnote">“If not” version done</span>
             : dim && t.ifNot ? <span className="bnote">If not: {t.ifNot}</span>
+            : t.deadline && t.status === "open" ? <span className={`bnote ${t.deadline <= date ? "warn" : ""}`}>Due {t.deadline === date ? "today" : t.deadline < date ? "already" : parseKey(t.deadline).toLocaleDateString(undefined, { weekday: "short", day: "numeric" })}</span>
             : null;
           const style = {
             top: y(s) + 1, height: h,

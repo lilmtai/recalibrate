@@ -1,6 +1,6 @@
 # Scheduling rules
 
-The scheduling engine is **deterministic** code (`src/lib/schedule.ts`, to be built), separate from any AI.
+The scheduling engine is **deterministic** code (`src/lib/schedule.ts`, tested in `schedule.test.ts`), separate from any AI.
 It enforces the rules below. AI may only propose arrangements *within* these rules (see `AI_BEHAVIOUR.md`).
 Every rule here needs a unit test.
 
@@ -53,6 +53,18 @@ Algorithm (deterministic):
 4. Whatever doesn't fit: offer the minimum version, then "postpone to …" (next free slot on a later day),
    or "drop for today".
 5. Output a **proposal** (list of moves with before → after and a one-line reason each). Apply only on approve.
+
+As built (`proposeRecovery` / `applyRecovery`):
+- "Running" = in focus, ongoing and started, or started and not finished; it holds its time until now if it overran.
+- Each flexible block gets the earliest free slot from max(now, its planned start): nothing is pulled earlier than
+  planned, and blocks that still fit don't move ("fewer moves").
+- Order: priority → blocks still current before ones whose time fully passed (a missed 7:00 block doesn't push
+  the 9:00 one you're late for) → deadline → planned start.
+- Doesn't fit: minimum version (`minDur`) → postpone to the next free slot in the next 7 days (not past the
+  deadline; keeps its own time if free) → tray. Routine instances are skipped for today instead. Blocks marked
+  "has to happen today" are flagged `nofit` and left for the user.
+- Low energy: high-energy / hard blocks use their minimum version; low-priority ones move to another day.
+- Approve records each change in `Task.moves` with source `recovery`.
 
 **Minimum viable day:** keep fixed blocks, essential personal care (routines tagged essential: meals, meds,
 sleep prep), and the single highest-priority task; everything else becomes optional or postponed.
