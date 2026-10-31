@@ -37,6 +37,12 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--fg); }
+/* feel like a native app: no zoom, no sideways drift, no grey tap flash */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; overscroll-behavior: none; }
+body { overflow-x: hidden; overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+#root { overflow-x: clip; }
+html, body, button, a, input, select, textarea, label, [role="button"] { touch-action: manipulation; }
+img, svg, video, canvas { max-width: 100%; }
 body { font-family: var(--body); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -664,3 +670,7 @@ table.est .num { font-size: 12.5px; white-space: nowrap; }
 .ongoingbtn { padding: 11px 13px; border-radius: 12px; border-style: dashed; color: var(--muted); font-weight: 600; text-align: left; }
 .linkbtn.small { font-size: 13px; }
 .focus-emoji { font-size: 44px; line-height: 1; margin-top: 6px; }
+
+/* iPhone zooms into any focused field smaller than 16px: keep every field at 16px or more. */
+input, select, textarea { font-size: 16px !important; }
+.codeinput { font-size: 24px !important; }
