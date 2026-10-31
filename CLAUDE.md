@@ -57,7 +57,12 @@ Rules for every agent (Claude Code, Codex):
 - Free blocks (`FreeItem` in `state.free`): no set time, repeat every N days, show as due in the to-do card,
   remind at `remindAt` daily while due/overdue (`cuesFor` kind `free`), Done moves `nextDue` forward (`lib/actions.ts`).
 - Sheets: `Sheet` has a grab handle (swipe down), ← back (panel stack in `App`), ✕ close; the phone back gesture closes it.
-- `src/components/`: `DayView` (Today: check-in, timeline, reorganize + tray, to-dos + due free blocks), `Timeline`, `MyDayView`, `WeekView`,
+- Today is schedule-first (owner: "too crowded"): header, week strip, then **at most one** slim `Notice` line
+  (energy question → "Day slipping?" → not logged → never miss twice → low fuel), each closable with ✕ for the day
+  (`useHidden`, localStorage `recalibrate.hidden`), then "N of M done" + Reorganize / Fix my day, then the timeline.
+  Below it on phones: Now / Up next card (✕ hides it for the day; a "Show “Now”" chip brings it back), to-dos,
+  reminders, energy/sleep chips. "Add block" is hidden on phones (the + button does it). Don't add cards above the day.
+- `src/components/`: `DayView` (Today: notice line, timeline, reorganize + tray, Now card, to-dos + due free blocks), `Timeline`, `MyDayView`, `WeekView`,
   `PatternsView`, `PlaybookView`, `MeView` (routines, day hours, account, phone app, example data), and the sheets
   (`BlockSheet`, `LogSheet`, `WhySheet` (one-tap reason), `MissSheet`/`CheckSheet`, `AskSheet`, `FreeSheet`/`FreeDueSheet`,
   `EntrySheet`, `QuickSheet`, `WelcomeSheet`, `SetupSheet` (+ `lib/pushCheck.ts` "Check notifications"), `AccountSheet`).

@@ -467,11 +467,13 @@ table.est .num { font-size: 12.5px; white-space: nowrap; }
 @media (prefers-reduced-motion: no-preference) { .entry.running { animation: pulse 2s ease-in-out infinite; } @keyframes pulse { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--gold) 30%, transparent); } } }
 
 @media (max-width: 820px) {
-  /* phone order: Now card, the day, then to-dos and the rest */
-  .grid { display: flex; flex-direction: column; gap: 18px; }
+  /* phone order: the day first, then Now / Up next, to-dos and the rest */
+  .grid { display: flex; flex-direction: column; gap: 18px; margin-top: 14px; }
   .side { display: contents; }
-  .side > .now { order: -1; }
-  .tlscroll { height: 62vh; }
+  .tlscroll { height: 66vh; height: 66dvh; }
+  /* the + button already adds blocks on phones */
+  .addblock { display: none; }
+  .now .what { font-size: 24px; }
   header.top { align-items: center; }
 }
 
@@ -480,7 +482,7 @@ table.est .num { font-size: 12.5px; white-space: nowrap; }
 .traycard .tray li { cursor: pointer; }
 .trayname { touch-action: none; user-select: none; }
 .traytime { white-space: nowrap; }
-@media (max-width: 820px) { .side > .traycard { order: -1; } }
+@media (max-width: 820px) { .side > .traycard.active { order: -1; } }
 
 /* one-tap notification answers */
 .askbtns { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
@@ -707,3 +709,31 @@ input, select, textarea { font-size: 16px !important; }
 .recoverlist li.offc { opacity: .55; }
 .recoverlist li.k-nofit { border-style: dashed; border-color: var(--warn); background: var(--warn-soft); }
 .recoverlist li.k-nofit .rmove b { color: var(--warn); }
+
+/* Today: one slim notice line above the day, closable */
+.notice { margin-top: 12px; display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 14px; border-radius: 14px; background: var(--warn-soft); font-size: 14px; min-height: 44px; }
+.notice.calm { background: var(--accent-soft); }
+.notice.gold { background: var(--gold-soft); }
+.notice .ntext { flex: 1; min-width: 0; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.notice b { font-weight: 700; color: var(--warn); }
+.notice.calm b { color: var(--accent-text); }
+.notice.gold b { color: var(--gold-text); }
+.notice .btn { flex: none; display: inline-flex; align-items: center; gap: 4px; }
+.notice .nseg { flex: none; }
+.notice .nseg button { padding: 5px 10px; font-size: 13px; }
+.nx { flex: none; width: 32px; height: 32px; border: 0; border-radius: 50%; background: none; color: var(--muted); display: grid; place-items: center; padding: 0; }
+.nx:hover { background: color-mix(in srgb, var(--fg) 8%, transparent); color: var(--fg); }
+.donecount { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--good); }
+.now { position: relative; }
+.nowx { position: absolute; z-index: 2; top: 10px; right: 10px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: color-mix(in srgb, var(--accent-fg) 12%, transparent); color: inherit; display: grid; place-items: center; padding: 0; opacity: .85; }
+.side .chiprow { margin-top: 0; }
+@media (max-width: 820px) {
+  /* Today on a phone: the schedule as high as possible */
+  .dayname { display: none; } /* the date is already in the header and the week strip */
+  .grid > section > .sechead { flex-wrap: nowrap; margin-bottom: 8px; }
+  .wrap { padding-top: 14px; }
+  header.top { padding-bottom: 4px; }
+  h1 { font-size: 30px; }
+  .weekstrip-wrap { margin-top: 4px; }
+  .wsday { padding: 2px 0; }
+}

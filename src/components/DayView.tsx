@@ -112,10 +112,10 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
   const repeat = missedYesterday.find((m) => tasks.some((t) => norm(t.title) === norm(m.title)));
   const toLog = date <= today() ? tasks.filter((t) => needsLog(t, date, today(), now)) : [];
   const tray = unplacedFor(state, date);
-  // offer "Fix my day" when the day slips (never applied without approval); "Not now" hides it until tomorrow
-  const [quiet, setQuiet] = useState<string | null>(() => { try { return localStorage.getItem("recalibrate.fixquiet"); } catch { return null; } });
-  const trigger = isToday && quiet !== date ? recoveryTrigger(tasks, now, { lowEnergy: lowDay, runningId: state.focus?.taskId }) : null;
-  const hush = () => { setQuiet(date); try { localStorage.setItem("recalibrate.fixquiet", date); } catch { /* ignore */ } };
+  // notices and the Now card can be closed (✕) for the rest of the day
+  const [hidden, hide] = useHidden(date);
+  // offer "Fix my day" when the day slips (never applied without approval)
+  const trigger = isToday ? recoveryTrigger(tasks, now, { lowEnergy: lowDay, runningId: state.focus?.taskId }) : null;
   const canFix = date >= today() && tasks.some((t) => t.status === "open");
   const confirmMove = (t: Task) => window.confirm(`“${t.title}” is a fixed appointment. Move it anyway?`);
 
@@ -123,40 +123,20 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
     <>
       <WeekStrip />
 
-      <CheckinRow date={date} isToday={isToday} tasks={tasks} notificationsOn={notificationsOn} />
-
-      {trigger && canFix ? (
-        <div className="banner calm fixbanner">
-          <b>Day slipping?</b>
-          <span>{trigger} One tap shows a plan that fits; nothing changes until you approve.</span>
-          <div className="row tight">
-            <button className="btn small primary" onClick={() => open({ type: "recover", date })}><Icon name="wand" size={14} /> Fix my day</button>
-            {toLog.length > 0 && <button className="btn small" onClick={() => open({ type: "log", task: toLog[0] })}>Log “{toLog[0].title}”</button>}
-            <button className="btn small ghost" onClick={hush}>Not now</button>
-          </div>
-        </div>
-      ) : toLog.length > 0 ? (
-        <div className="banner">
-          <b>{toLog.length} block{toLog.length > 1 ? "s" : ""} ended without a log.</b>
-          <span>Logging what really happened takes a few seconds and shows where your time goes.</span>
-          <button className="btn small" onClick={() => open({ type: "log", task: toLog[0] })}>Log “{toLog[0].title}”</button>
-        </div>
-      ) : repeat ? (
-        <div className="banner"><b>Never miss twice.</b><span>You missed “{repeat.title}” yesterday{repeat.barrier && ` (${BARRIER_LABEL[repeat.barrier].toLowerCase()})`}. Today, even the “if not” version counts.</span></div>
-      ) : lowDay ? (
-        <div className="banner calm"><b>Low-fuel day.</b><span>High-energy blocks are dimmed. Do their “if not” versions and protect one win.</span></div>
-      ) : null}
+      <Notice date={date} isToday={isToday} hidden={hidden} hide={hide} trigger={canFix ? trigger : null} toLog={toLog} repeat={repeat} lowDay={lowDay} />
 
       <div className="grid">
         <section>
           <div className="sechead">
-            <h2>{parseKey(date).toLocaleDateString(undefined, { weekday: "long" })}</h2>
+            <h2 className="dayhead">
+              <span className="dayname">{parseKey(date).toLocaleDateString(undefined, { weekday: "long" })}{tasks.length > 0 && " · "}</span>
+              {tasks.length > 0 && <span className="donecount">{tasks.filter(isWin).length} of {tasks.length} done</span>}</h2>
             <div className="row tight">
               <button className={`btn small ${reorg ? "primary" : ""}`} onClick={() => { setReorg(!reorg); setSelected(null); }}>
                 {reorg ? "Done reorganizing" : "Reorganize"}
               </button>
               {!reorg && canFix && <button className="btn small fixbtn" onClick={() => open({ type: "recover", date })}><Icon name="wand" size={14} /> Fix my day</button>}
-              {!reorg && <button className="btn primary small" onClick={() => open({ type: "block", date })}>Add block</button>}
+              {!reorg && <button className="btn primary small addblock" onClick={() => open({ type: "block", date })}>Add block</button>}
             </div>
           </div>
           {reorg && (
@@ -178,10 +158,11 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
           )}
         </section>
         <aside className="side">
-          {isToday && <NowCard tasks={tasks} now={now} />}
+          {isToday && !hidden.includes("now") && <NowCard tasks={tasks} now={now} onHide={() => hide("now")} />}
           {(reorg || tray.length > 0) && <TrayCard tray={tray} drag={drag} selected={selected} reorg={reorg} />}
           <TodoCard date={date} isToday={isToday} drag={drag} selected={selected} />
           <CuesCard cues={cues} now={isToday ? now : -1} />
+          <CheckinRow date={date} notificationsOn={notificationsOn} showNow={isToday && hidden.includes("now")} onShowNow={() => hide("now", false)} />
         </aside>
       </div>
 
@@ -206,7 +187,7 @@ function TrayCard({ tray, drag, selected, reorg }: { tray: Task[]; drag: Drag; s
     onPointerUp: drag.end,
   });
   return (
-    <div className="card traycard">
+    <div className={`card traycard ${reorg ? "active" : ""}`}>
       <div className="sechead">
         <h2>Tray</h2>
         {tray.length > 0 && <button className="btn ghost small" onClick={putBack}>Put all back</button>}
@@ -318,7 +299,8 @@ function TodoCard({ date, isToday, drag, selected }: {
   );
 }
 
-function NowCard({ tasks, now }: { tasks: Task[]; now: number }) {
+function NowCard({ tasks, now, onHide }: { tasks: Task[]; now: number; onHide: () => void }) {
+  const x = <button className="nowx" aria-label="Hide for today" onClick={onHide}><Icon name="close" size={16} /></button>;
   const { open, update, toast, state } = useApp();
   // the block you're focusing on lives in the focus bar, not here
   const openTasks = tasks.filter((t) => t.status === "open" && t.id !== state.focus?.taskId);
@@ -333,7 +315,7 @@ function NowCard({ tasks, now }: { tasks: Task[]; now: number }) {
     };
     return (
       <div className="card now" style={{ "--c": `var(--c-${cur.category})` } as CSSProperties}>
-        <h2>Now</h2><div className="what">{cur.emoji || suggestEmoji(cur.title, cur.category, state)} {cur.title}</div>
+        {x}<h2>Now</h2><div className="what">{cur.emoji || suggestEmoji(cur.title, cur.category, state)} {cur.title}</div>
         <div className="bar"><i style={{ width: `${p}%` }} /></div>
         <div className="when">{toMin(cur.start) + cur.dur - now} min left · ends {fmt(toMin(cur.start) + cur.dur)}</div>
         {!last && p >= 40 && (
@@ -362,7 +344,7 @@ function NowCard({ tasks, now }: { tasks: Task[]; now: number }) {
   if (next) {
     const gap = toMin(next.start) - now;
     return (
-      <div className="card now"><h2>Up next</h2><div className="what">{next.emoji || suggestEmoji(next.title, next.category, state)} {next.title}</div>
+      <div className="card now">{x}<h2>Up next</h2><div className="what">{next.emoji || suggestEmoji(next.title, next.category, state)} {next.title}</div>
         <div className="when">in {fmtDur(gap)} · {next.start}</div>
         {gap <= 10 && <div className="banner calm" style={{ marginTop: 12 }}><b>Transition.</b><span>Wrap up and stand up now.</span></div>}
         {next.ifNot && <div className="small muted" style={{ marginTop: 10 }}>If not: {next.ifNot}</div>}
@@ -375,12 +357,12 @@ function NowCard({ tasks, now }: { tasks: Task[]; now: number }) {
   }
   if (!tasks.length) {
     return (
-      <div className="card now"><h2>Now</h2><div className="what">Open time</div>
+      <div className="card now">{x}<h2>Now</h2><div className="what">Open time</div>
         <div className="small muted">Nothing planned. Tap a time on the day to add a block, or drag a to-do onto it.</div></div>
     );
   }
   return (
-    <div className="card now"><h2>Now</h2><div className="what">{openTasks.length ? "Log what happened" : "Day closed"}</div>
+    <div className="card now">{x}<h2>Now</h2><div className="what">{openTasks.length ? "Log what happened" : "Day closed"}</div>
       <div className="small muted">{openTasks.length ? `${openTasks.length} block${openTasks.length > 1 ? "s" : ""} still unlogged. Tap one on the timeline.` : "Everything is logged. Check Patterns to see what's working."}</div>
     </div>
   );
@@ -405,39 +387,116 @@ function CuesCard({ cues, now }: { cues: ReturnType<typeof cuesFor>; now: number
   );
 }
 
-/** Morning check-in as a small card once a day; afterwards just chips you can tap to change. */
-function CheckinRow({ date, isToday, tasks, notificationsOn }: { date: string; isToday: boolean; tasks: Task[]; notificationsOn: boolean }) {
+/** Energy / sleep chips under the day; tap one to change it. (The morning question is the notice line on top.) */
+function CheckinRow({ date, notificationsOn, showNow, onShowNow }: { date: string; notificationsOn: boolean; showNow: boolean; onShowNow: () => void }) {
   const { state, update, open } = useApp();
   const ci = state.checkins[date] || {};
   const [editing, setEditing] = useState(false);
   const set = (patch: Partial<typeof ci>) => update((s) => { s.checkins[date] = { ...(s.checkins[date] || {}), ...patch }; });
-  const done = tasks.filter(isWin).length;
   const cap = (x: string) => x[0].toUpperCase() + x.slice(1);
 
-  if (editing || (isToday && !ci.energy && !ci.skipped)) {
+  if (editing) {
     return (
       <div className="card morning" aria-label="Daily check-in">
-        <div className="what">{editing ? "Update your check-in" : "Morning check-in · 5 seconds"}</div>
+        <div className="what">Your check-in</div>
         <div><label className="lbl" htmlFor="sleep">Slept</label>
           <input className="sleep" id="sleep" type="number" min={0} max={14} step={0.5} placeholder="7"
             value={ci.sleep ?? ""} onChange={(e) => set({ sleep: e.target.value === "" ? undefined : +e.target.value })} /> <span className="muted small">h</span></div>
         <div><span className="lbl">Energy</span>
           <span className="seg">
             {(["low", "steady", "high"] as const).map((e) => (
-              <button key={e} aria-pressed={ci.energy === e} onClick={() => { set({ energy: e }); setEditing(false); }}>{cap(e)}</button>
+              <button key={e} aria-pressed={ci.energy === e} onClick={() => set({ energy: e, skipped: undefined })}>{cap(e)}</button>
             ))}
           </span></div>
         <span className="spacer" />
-        <button className="btn ghost small" onClick={() => { if (!ci.energy) set({ skipped: true }); setEditing(false); }}>{ci.energy ? "Done" : "Skip today"}</button>
+        <button className="btn ghost small" onClick={() => setEditing(false)}>Done</button>
       </div>
     );
   }
   return (
     <div className="chiprow">
       <button className="chipbtn" onClick={() => setEditing(true)}>Energy · {ci.energy ? cap(ci.energy) : "not set"}</button>
-      {ci.sleep !== undefined && <button className="chipbtn" onClick={() => setEditing(true)}>Slept {ci.sleep} h</button>}
-      {tasks.length > 0 && <span className="chipbtn good">{done} of {tasks.length} done</span>}
+      <button className="chipbtn" onClick={() => setEditing(true)}>{ci.sleep !== undefined ? `Slept ${ci.sleep} h` : "Sleep · not set"}</button>
+      {showNow && <button className="chipbtn" onClick={onShowNow}>Show “Now”</button>}
       {!notificationsOn && <button className="chipbtn" onClick={() => open({ type: "setup" })}>Turn on reminders</button>}
     </div>
   );
+}
+
+/** Things closed with ✕ for one day (per device). */
+function useHidden(date: string): [string[], (key: string, on?: boolean) => void] {
+  const KEY = "recalibrate.hidden";
+  const read = (): string[] => {
+    try { const v = JSON.parse(localStorage.getItem(KEY) || "{}"); return v.date === date ? v.keys || [] : []; } catch { return []; }
+  };
+  const [keys, setKeys] = useState<string[]>(read);
+  const [forDate, setForDate] = useState(date);
+  if (forDate !== date) { setForDate(date); setKeys(read()); }
+  const hide = (key: string, on = true) => {
+    const next = on ? [...new Set([...keys, key])] : keys.filter((k) => k !== key);
+    setKeys(next);
+    try { localStorage.setItem(KEY, JSON.stringify({ date, keys: next })); } catch { /* ignore */ }
+  };
+  return [keys, hide];
+}
+
+/**
+ * At most one slim line above the day, most useful first: the morning energy question, a slipping day,
+ * unlogged blocks, "never miss twice", a low-fuel day. Each closes with ✕ for the rest of the day.
+ */
+function Notice({ date, isToday, hidden, hide, trigger, toLog, repeat, lowDay }: {
+  date: string; isToday: boolean; hidden: string[]; hide: (k: string) => void;
+  trigger: string | null; toLog: Task[]; repeat?: Task; lowDay: boolean;
+}) {
+  const { state, update, open } = useApp();
+  const ci = state.checkins[date] || {};
+  const x = (key: string, label = "Hide for today") => <button className="nx" aria-label={label} onClick={() => hide(key)}><Icon name="close" size={16} /></button>;
+  const setEnergy = (e: "low" | "steady" | "high") => update((s) => { s.checkins[date] = { ...(s.checkins[date] || {}), energy: e }; });
+
+  if (isToday && !ci.energy && !ci.skipped) {
+    return (
+      <div className="notice gold" role="group" aria-label="Morning check-in">
+        <span className="ntext"><b>Energy today?</b></span>
+        <span className="seg nseg">
+          {(["low", "steady", "high"] as const).map((e) => <button key={e} onClick={() => setEnergy(e)}>{e[0].toUpperCase() + e.slice(1)}</button>)}
+        </span>
+        <button className="nx" aria-label="Skip today's check-in" onClick={() => update((s) => { s.checkins[date] = { ...(s.checkins[date] || {}), skipped: true }; })}><Icon name="close" size={16} /></button>
+      </div>
+    );
+  }
+  if (trigger && !hidden.includes("fix")) {
+    return (
+      <div className="notice calm">
+        <span className="ntext"><b>Day slipping?</b> {trigger}</span>
+        <button className="btn small primary" onClick={() => open({ type: "recover", date })}><Icon name="wand" size={14} /> Fix</button>
+        {x("fix")}
+      </div>
+    );
+  }
+  if (toLog.length > 0 && !hidden.includes("log")) {
+    return (
+      <div className="notice">
+        <span className="ntext"><b>{toLog.length} not logged</b> · {toLog[0].title}{toLog.length > 1 ? " and more" : ""}</span>
+        <button className="btn small" onClick={() => open({ type: "log", task: toLog[0] })}>Log</button>
+        {x("log")}
+      </div>
+    );
+  }
+  if (repeat && !hidden.includes("repeat")) {
+    return (
+      <div className="notice">
+        <span className="ntext"><b>Never miss twice:</b> “{repeat.title}” slipped yesterday{repeat.barrier ? ` (${BARRIER_LABEL[repeat.barrier].toLowerCase()})` : ""}. Even the “if not” counts.</span>
+        {x("repeat")}
+      </div>
+    );
+  }
+  if (lowDay && !hidden.includes("low")) {
+    return (
+      <div className="notice calm">
+        <span className="ntext"><b>Low-fuel day.</b> Hard blocks are dimmed; their “if not” versions count.</span>
+        {x("low")}
+      </div>
+    );
+  }
+  return null;
 }

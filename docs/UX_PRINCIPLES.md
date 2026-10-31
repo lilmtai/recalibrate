@@ -31,6 +31,8 @@
 - Areas: work `#2c49a6`, health `#2f8466`, social `#b84d72`, side hustle `#6e52a3`, me time `#2c8799`.
 - Fonts: DM Serif Display (headings), Plus Jakarta Sans (everything else). Inline SVG UI icons; emoji only as
   block / category icons (suggested from the title, user can change).
+- Today is schedule-first: week strip, at most one slim notice line (closable ✕), then the day. Now / Up next,
+  to-dos and check-in chips sit below the day; Now / Up next can be hidden for the day.
 - Today: week strip on top, then one hour-by-hour day view. Blocks show an emoji pill, "13:30 – 14:00 (30m)",
   the title and a one-tap ✓; 15-minute blocks fit on one line. Free time says "tap to plan". The same view is used
   for Reorganize (drag, resize, tray).
