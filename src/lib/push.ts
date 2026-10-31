@@ -20,7 +20,7 @@ export function buildQueue(s: State, days = 7): QueueItem[] {
     const midnight = parseKey(d).getTime();
     for (const c of cuesFor(s, d)) {
       const kind = c.kind === "transition" ? "start" : c.kind;
-      if (!prefs[kind as keyof NotifyPrefs]) continue;
+      if (!prefs[(kind === "focus" ? "end" : kind) as keyof NotifyPrefs]) continue;
       const at = midnight + c.at * 60_000;
       if (at < soon) continue;
       const link = c.kind === "wyd" ? `./?wyd=1&date=${d}&at=${c.at}${c.taskId ? `&task=${encodeURIComponent(c.taskId)}` : ""}`
@@ -32,6 +32,7 @@ export function buildQueue(s: State, days = 7): QueueItem[] {
         : kind === "end" ? [`${c.forTask} just ended`, "Done?"]
         : kind === "free" ? [`${c.forTask} is due`, c.text]
         : kind === "wyd" ? ["What are you doing?", c.text]
+        : kind === "focus" ? [`${c.forTask}: time's up`, c.text]
         : [c.text, `For ${c.tomorrow ? "tomorrow's " : ""}${c.forTask}`];
       out.push({ send_at: new Date(at).toISOString(), title, body, url: link, tag: `${d}|${c.key}|${c.at}`, kind });
     }

@@ -31,6 +31,7 @@ import { Icon } from "./components/Icon";
 import { useSync } from "./sync";
 import { useInstall, usePush } from "./usePwa";
 import { useHistory } from "./useHistory";
+import { FocusBar, FocusView } from "./components/FocusView";
 
 // Week holds the week plan plus Insights (patterns, playbook) behind a switch.
 type Group = "today" | "myday" | "work" | "week" | "me";
@@ -140,6 +141,10 @@ export default function App() {
   const install = useInstall();
   const push = usePush(sync.userId, state, update);
   const history = useHistory(sync.userId, state, update);
+  // focus opens full screen when it starts; it can be minimized to a bar
+  const [focusMin, setFocusMin] = useState(false);
+  const focusId = state.focus ? state.focus.taskId + state.focus.startedAt : "";
+  useEffect(() => { setFocusMin(false); }, [focusId]);
   useReminders(state, now, toast, onCue, !push.subscribed);
 
   useEffect(() => {
@@ -298,6 +303,9 @@ export default function App() {
           })}
         </div>
       )}
+
+      {state.focus && !focusMin && !sheet && <FocusView onMinimize={() => setFocusMin(true)} />}
+      {state.focus && (focusMin || sheet) && <FocusBar onOpen={() => { setFocusMin(false); close(); }} />}
 
       <div className="toasts" aria-live="polite">
         {toasts.map((t) => (

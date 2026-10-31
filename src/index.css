@@ -552,3 +552,46 @@ table.est .num { font-size: 12.5px; white-space: nowrap; }
 .reviewlist li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; }
 .reviewlist .grow { flex: 1 1 100%; }
 .reviewlist input[type="date"] { padding: 6px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+
+/* ---- Start + focus mode ---- */
+.startrow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+.focus-screen {
+  position: fixed; inset: 0; z-index: 25; overflow-y: auto;
+  background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--c) 22%, #18224a) 0%, #121a3a 55%, #0c1126 100%);
+  color: #f4f1ea;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
+}
+.focus-inner { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 16px; min-height: 100%; }
+.focus-top { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+.focus-top .chip { background: rgb(255 255 255 / .1); color: #f4f1ea; }
+.focus-top .roundbtn { background: rgb(255 255 255 / .1); color: #f4f1ea; transform: rotate(-90deg); }
+.focus-title { font-family: var(--display); font-weight: 400; font-size: clamp(30px, 8vw, 42px); line-height: 1.1; text-align: center; margin: 8px 0 0; color: #f4f1ea; }
+.focus-sub { font-size: 14px; color: rgb(244 241 234 / .75); text-align: center; max-width: 36ch; }
+.focus-ring { position: relative; width: 260px; height: 260px; max-width: 72vw; max-height: 72vw; margin: 6px 0; }
+.focus-ring svg { width: 100%; height: 100%; }
+.ring-bg { fill: none; stroke: rgb(255 255 255 / .1); stroke-width: 10; }
+.ring-fg { fill: none; stroke: #d9b978; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+.ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.ring-text b { font-family: var(--display); font-weight: 400; font-size: 56px; line-height: 1; font-variant-numeric: tabular-nums; }
+.ring-text span { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: rgb(244 241 234 / .7); }
+.focus-btns { width: 100%; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.focus-btns .btn { flex: 1 1 120px; background: rgb(255 255 255 / .08); border-color: rgb(255 255 255 / .16); color: #f4f1ea; }
+.focus-btns .btn.primary { background: #d9b978; border-color: #d9b978; color: #141a30; }
+.focus-ask { width: 100%; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.focus-q { font-family: var(--display); font-size: 24px; text-align: center; }
+.focus-capture { width: 100%; display: flex; gap: 8px; margin-top: 4px; }
+.focus-capture input { flex: 1; min-width: 0; padding: 12px 14px; border-radius: 14px; border: 1px solid rgb(255 255 255 / .16); background: rgb(255 255 255 / .06); color: #f4f1ea; font-size: 15px; }
+.focus-capture input::placeholder { color: rgb(244 241 234 / .5); }
+.focus-capture .btn { background: rgb(255 255 255 / .1); border-color: transparent; color: #f4f1ea; }
+.focus-foot { width: 100%; display: flex; align-items: center; gap: 8px; font-size: 14px; color: rgb(244 241 234 / .8); margin-top: auto; padding-top: 8px; }
+.focus-foot b { color: #f4f1ea; }
+.focus-foot .btn.ghost { color: rgb(244 241 234 / .7); }
+.focusbar {
+  position: fixed; z-index: 16; left: max(12px, env(safe-area-inset-left, 0px)); right: calc(92px + env(safe-area-inset-right, 0px));
+  bottom: calc(14px + var(--nav-h) + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 0; border-radius: 16px;
+  background: #18224a; color: #f4f1ea; font-size: 14px; font-weight: 600; text-align: left; box-shadow: var(--shadow-lift);
+}
+.focusbar b { font-variant-numeric: tabular-nums; color: #d9b978; }
+.focusbar.over b { color: #f0a86a; }
+@media (prefers-reduced-motion: no-preference) { .focus-screen { animation: viewin .25s ease-out; } }

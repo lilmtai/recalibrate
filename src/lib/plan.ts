@@ -69,7 +69,17 @@ export function cuesFor(s: State, date: string): Cue[] {
   const add = (t: Task, r: Rule, at: number, tomorrow: boolean) =>
     out.push({ key: `${t.id}:${r.id}`, at, text: r.fix, forTask: t.title, barrier: r.barrier, tomorrow, kind: "fix" });
 
-  for (const t of tasksFor(s, date).filter((t) => t.status === "open")) {
+  // while focusing, that block's own prompts (and hourly WYD) stay quiet; "time's up" replaces them
+  const f = s.focus && s.focus.date === date ? s.focus : undefined;
+  const minOf = (iso: string) => { const d = new Date(iso); return d.getHours() * 60 + d.getMinutes(); };
+  const focusFrom = f ? minOf(f.startedAt) : -1, focusTo = f ? minOf(f.endsAt) : -1;
+  if (f) {
+    const ft = tasksFor(s, date).find((t) => t.id === f.taskId);
+    out.push({ key: `focus:${f.taskId}:${f.endsAt}`, at: focusTo, kind: "focus", tomorrow: false, taskId: f.taskId,
+      forTask: ft?.title || "Focus", text: f.mode === "five" ? "5 minutes done. Keep going?" : "Time's up. Need more time?" });
+  }
+
+  for (const t of tasksFor(s, date).filter((t) => t.status === "open" && t.id !== f?.taskId)) {
     const st = toMin(t.start);
     out.push({ key: `${t.id}:start`, at: st - 5, text: `${t.title} starts at ${t.start}`, forTask: t.title, tomorrow: false, kind: "transition", taskId: t.id });
     if (t.dur >= 30 && !(t.checks || []).length)
@@ -96,6 +106,7 @@ export function cuesFor(s: State, date: string): Cue[] {
   const day = tasksFor(s, date);
   for (let at = (Math.floor(toMin(hrs.start) / 60) + 1) * 60; at <= toMin(hrs.end); at += 60) {
     if (out.some((c) => c.kind !== "fix" && c.kind !== "free" && Math.abs(c.at - at) <= 10)) continue;
+    if (f && at >= focusFrom && at <= focusTo + 5) continue;
     const planned = day.find((t) => toMin(t.start) <= at - 1 && at - 1 < toMin(t.start) + t.dur);
     out.push({
       key: `wyd:${at}`, at, kind: "wyd", tomorrow: false, forTask: planned?.title || "",

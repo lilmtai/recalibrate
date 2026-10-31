@@ -31,6 +31,7 @@ export function useReminders(
     for (const c of cuesFor(state, d)) {
       const id = d + c.key + c.at;
       if (fired.current.has(id) || now < c.at || now > c.at + 2) continue;
+      if (c.kind === "focus") continue; // the focus screen handles its own ending
       fired.current.add(id);
       const msg =
         c.kind === "transition" ? `Heads up: ${c.text}`

@@ -5,6 +5,7 @@ import type { Task } from "../types";
 import { addDays, DAY_SHORT, fmt, fmtDur, norm, nowMin, parseKey, toMin, today, uid, weekday } from "../lib/time";
 import { cuesFor, everyLabel, freeDue, materialize, needsLog, notesFor, notesToReview, tasksFor, unplacedFor } from "../lib/plan";
 import { freeDone, freeLater, markStarted } from "../lib/actions";
+import { startFocus } from "../lib/focus";
 import { isWin } from "../lib/stats";
 import { HOUR, snap, Timeline } from "./Timeline";
 
@@ -300,8 +301,9 @@ function TodoCard({ date, isToday, drag, selected }: {
 }
 
 function NowCard({ tasks, now }: { tasks: Task[]; now: number }) {
-  const { open, update, toast } = useApp();
-  const openTasks = tasks.filter((t) => t.status === "open");
+  const { open, update, toast, state } = useApp();
+  // the block you're focusing on lives in the focus bar, not here
+  const openTasks = tasks.filter((t) => t.status === "open" && t.id !== state.focus?.taskId);
   const cur = openTasks.find((t) => toMin(t.start) <= now && now < toMin(t.start) + t.dur);
   const next = openTasks.find((t) => toMin(t.start) > now);
   if (cur) {
@@ -332,7 +334,10 @@ function NowCard({ tasks, now }: { tasks: Task[]; now: number }) {
           </div>
         )}
         {next && <div className="small muted" style={{ marginTop: 10 }}>Next: {next.title} at {next.start}</div>}
-        <div className="actions"><button className="btn small light" onClick={() => open({ type: "log", task: cur })}>Log it</button></div>
+        <div className="actions">
+          {state.focus?.taskId !== cur.id && <button className="btn small light" onClick={() => update((s) => startFocus(s, cur, new Date()))}>Start focus</button>}
+          <button className="btn small" onClick={() => open({ type: "log", task: cur })}>Log it</button>
+        </div>
       </div>
     );
   }
@@ -343,6 +348,10 @@ function NowCard({ tasks, now }: { tasks: Task[]; now: number }) {
         <div className="when">in {fmtDur(gap)} · {next.start}</div>
         {gap <= 10 && <div className="banner calm" style={{ marginTop: 12 }}><b>Transition.</b><span>Wrap up and stand up now.</span></div>}
         {next.ifNot && <div className="small muted" style={{ marginTop: 10 }}>If not: {next.ifNot}</div>}
+        <div className="actions">
+          <button className="btn small" onClick={() => update((s) => startFocus(s, next, new Date(), true))}>Just 5 minutes</button>
+          <button className="btn small light" onClick={() => update((s) => startFocus(s, next, new Date()))}>Start now</button>
+        </div>
       </div>
     );
   }

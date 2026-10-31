@@ -4,6 +4,8 @@ import type { Task } from "../types";
 import { addDays, fmt, toMin, uid } from "../lib/time";
 import { materialize, remindLabel, rulesFor } from "../lib/plan";
 import { markEnded, scoreRules } from "../lib/actions";
+import { startFocus } from "../lib/focus";
+import { today } from "../lib/time";
 import { syncActuals } from "../lib/actuals";
 import { Sheet } from "./Sheet";
 
@@ -64,7 +66,13 @@ export function LogSheet({ task }: { task: Task }) {
       {task.instead && task.instead.what.length > 0 && (
         <div className="hint">Time went to: {task.instead.what.map((k) => INSTEAD_LABEL[k].toLowerCase()).join(", ")}{task.instead.note ? ` (${task.instead.note})` : ""}</div>
       )}
-      <div className="field">How did it go?</div>
+      {task.status === "open" && task.date === today() && (
+        <div className="startrow">
+          <button className="btn big primary" onClick={() => { update((s) => startFocus(s, task, new Date())); close(); }}>Start</button>
+          <button className="btn big" onClick={() => { update((s) => startFocus(s, task, new Date(), true)); close(); }}>Just 5 minutes</button>
+        </div>
+      )}
+      <div className="field">{task.status === "open" ? "Or log how it went" : "How did it go?"}</div>
       <div className="fixes">
         <button className="pick" onClick={() => mark("done")}>Done</button>
         <button className="pick" onClick={() => open({ type: "miss", task, partial: true })}>Partly done</button>

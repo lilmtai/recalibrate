@@ -53,7 +53,7 @@ and acceptance criteria (AC). An item is done when every AC is met, tests pass, 
 **P-6 · Floating tasks: duration, preferred window, slot suggestions** (RF-2, RF-4)
 - AC: free blocks / to-dos can have minutes and a preferred window; "Find a time" shows 2–3 valid slots.
 
-## Sprint 2 · Execution (P0)
+## Sprint 2 · Execution (P0) · E-1, E-2, E-6 done; E-3, E-4, E-5 open
 
 **E-1 · Start button and focus mode** (EX-2, EX-4, TA-1)
 - AC: every block has Start. Focus screen: task, first step, time left, next up, capture field,

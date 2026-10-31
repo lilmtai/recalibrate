@@ -42,6 +42,9 @@ Rules for every agent (Claude Code, Codex):
 - History ("what really happened") syncs through Supabase `execution_log` (`supabase/history.sql`): `src/useHistory.ts`
   (network, mode blob/table), `src/lib/historySync.ts` + `src/lib/history.ts` (pure, tested). Deletions go through
   `dropActuals` (tombstones); WYD answers carry `promptKey` so a prompt is logged once across devices.
+- Start + focus mode: `lib/focus.ts` (pure, tested: start, 5-minute start, pause, +10/+30, done/partly, cancel) and
+  `components/FocusView.tsx` (`FocusView` full screen, `FocusBar` when minimized). `state.focus` holds one session;
+  during focus `cuesFor` adds a `focus` "time's up" cue and silences that block's prompts and hourly WYD.
 - Blocks record `startedAt` / `endedAt` (`markStarted` / `markEnded` in `lib/actions.ts`); `startState()` tells
   never-started from started-unfinished. Old unfinished to-dos never roll over: `notesToReview` + `ReviewSheet`.
 - `src/lib/answers.ts`: applies one-tap notification answers saved by the service worker (`recalibrate-pending` cache).
@@ -65,7 +68,7 @@ Rules for every agent (Claude Code, Codex):
 - Phone first: bottom tab bar, + button, test at 390px wide and in dark mode.
 
 ## Owner-side setup status (Supabase dashboard)
-- `schema.sql`: done (sync works).
+- `schema.sql`: done (sync works). `history.sql`: done (Me shows "stored in its own table").
 - `push.sql` + `send-push` function + secrets: done; the test notification arrives on the owner's iPhone.
   If reminders don't arrive, run Me → Phone app & notifications → Check notifications (it uploads and lists the schedule).
   The VAPID private key and cron secret are NOT in the repo; only the public key is (`src/lib/push.ts`).
@@ -75,7 +78,8 @@ Rules for every agent (Claude Code, Codex):
 ## Known limits / next steps
 - iPhone web push shows no action buttons; tapping opens a one-tap question (`AskSheet`). Native buttons need the App Store build.
 - Reminders are scheduled 7 days ahead whenever the plan changes; they stop if the app isn't opened for a week.
-- Next: see `docs/ROADMAP.md` (Sprint 0 foundation first: tests, start/finish times, no auto-rollover, history tables).
+- Next: see `docs/ROADMAP.md`. Done: Sprint 0, Sprint 2 E-1/E-2/E-6. Next up: Sprint 1 P-1/P-2 (fixed blocks, priority,
+  deadline) then Sprint 3 recovery ("Fix my day", minimum viable day), then the remaining Sprint 2 items.
 
 ## Conventions
 - Commit to `main` only when asked; deploy is automatic. End commit messages with the session's attribution lines.

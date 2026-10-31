@@ -21,7 +21,10 @@ export function dropActuals(s: State, pred: (a: Actual) => boolean) {
  */
 export function syncActuals(s: State, t: Task) {
   dropActuals(s, (a) => !!a.auto && a.taskId === t.id);
-  const st = toMin(t.start);
+  // use the real start when we know it (Start / focus / "I'm on it" on the same day)
+  const real = t.startedAt ? new Date(t.startedAt) : null;
+  const sameDay = real && `${real.getFullYear()}-${String(real.getMonth() + 1).padStart(2, "0")}-${String(real.getDate()).padStart(2, "0")}` === t.date;
+  const st = real && sameDay ? real.getHours() * 60 + real.getMinutes() : toMin(t.start);
   const add = (start: number, end: number, extra: Partial<Actual>) => {
     if (end - start < 1) return;
     s.actuals.push({ id: uid(), date: t.date, start, end: Math.min(1440, end), title: t.title, kind: "plan", category: t.category, taskId: t.id, auto: true, ex: t.ex, ...extra });

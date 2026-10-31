@@ -28,9 +28,9 @@ Backlog items in `ROADMAP.md` reference these IDs.
 | TA-2 | Visual progress through the current hour | Partial | Progress bar per block and a "now" line on the timeline; no hour-progress view. |
 | TA-3 | Notifications before transitions | Done | 5-min "starts soon" (push + in-app). |
 | TA-4 | Hourly execution check-ins | Done | WYD on the hour during waking hours. |
-| TA-5 | Actual start and finish timestamps | Partial | `Task.startedAt` / `endedAt`, set by "I'm on it", the Now card, notification answers, WYD "I did", "now doing", and logging an outcome. A dedicated Start button comes with EX-2. |
+| TA-5 | Actual start and finish timestamps | Done | `Task.startedAt` / `endedAt`, set by "I'm on it", the Now card, notification answers, WYD "I did", "now doing", and logging an outcome. A dedicated Start button comes with EX-2. |
 | TA-6 | Estimated vs actual duration | Done | Actual-time chips → time multiplier, per-block estimates in Insights. |
-| TA-7 | Optional overtime confirmation | Missing | |
+| TA-7 | Optional overtime confirmation | Done | Focus mode: "Time's up. Need more time?" +10 / +30 / Done; extensions counted (`Task.extendedMin`). |
 | TA-8 | Automatic recording of unplanned activity | Partial | Logged via WYD / My day, but only when the user answers. |
 | TA-9 | Notification modes: strict / adaptive / minimal | Missing | Per-type on/off switches exist (`NotifyPrefs`). |
 
@@ -39,9 +39,9 @@ Backlog items in `ROADMAP.md` reference these IDs.
 | ID | Requirement | Status | Notes / where |
 | --- | --- | --- | --- |
 | EX-1 | Subtasks on any task | Partial | Steps exist for **projects** (Work tab), not for blocks. |
-| EX-2 | Prominent **Start** button: record start, show first action, focus mode, timer | Missing | "What I'm doing right now" in My day is a partial stand-in. |
-| EX-3 | 5-minute starting commitment | Missing | |
-| EX-4 | Focus mode: only current task, time left, next up, distraction capture, pause / finish / extend | Missing | |
+| EX-2 | Prominent **Start** button: record start, show first action, focus mode, timer | Done | Start on the block panel, the Now card and Up next; records the real start and a running My day entry (`lib/focus.ts`). First action shows once subtasks exist (EX-1). |
+| EX-3 | 5-minute starting commitment | Done | "Just 5 minutes" → "Keep going?" or "That's enough for now" (logged as partly done, no guilt). |
+| EX-4 | Focus mode: only current task, time left, next up, distraction capture, pause / finish / extend | Done | `FocusView` (full screen, minimizes to a bar); other prompts and hourly WYD stay quiet during focus; "time's up" push notification. Captured thoughts go to to-dos until the inbox (CI-5) exists. |
 
 ## Module 4 · Check-ins and execution tracking (P0)
 

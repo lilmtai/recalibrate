@@ -48,6 +48,8 @@ export interface Task {
   /** when you really started / finished (ISO), recorded by Start, "I'm on it", WYD, or logging it done */
   startedAt?: string;
   endedAt?: string;
+  /** minutes added with "+10 / +30" when time ran out */
+  extendedMin?: number;
   /** in the reorganize tray, not on the timeline */
   unplaced?: boolean;
   /** share of the block done, for "partial" (0.25 / 0.5 / 0.75) */
@@ -132,6 +134,20 @@ export interface FreeItem {
   ex?: boolean;
 }
 
+/** A running focus session for a block. Times are ISO strings so every device agrees. */
+export interface Focus {
+  taskId: string;
+  date: string;
+  startedAt: string;
+  endsAt: string;
+  /** "five" = the 5-minute start; "block" = working through the block */
+  mode: "five" | "block";
+  pausedAt?: string;
+  pausedMs: number;
+  /** id of the running My day entry */
+  actualId: string;
+}
+
 /** A project in the Work tab. */
 export interface Project {
   id: string;
@@ -196,6 +212,8 @@ export interface State {
   steps: Step[];
   pages: Page[];
   notify?: NotifyPrefs;
+  /** the block you're focusing on right now (one at a time) */
+  focus?: Focus;
   /** usual waking hours; the timeline folds away the rest */
   dayHours?: { start: string; end: string };
   /** finished (or skipped) first-time setup */
@@ -211,7 +229,7 @@ export interface Cue {
   forTask: string;
   barrier?: BarrierKey;
   tomorrow: boolean;
-  kind: "fix" | "transition" | "mid" | "end" | "free" | "wyd";
+  kind: "fix" | "transition" | "mid" | "end" | "free" | "wyd" | "focus";
   taskId?: string;
   freeId?: string;
 }

@@ -38,6 +38,7 @@ export function merge(a: State, b: State): State {
     pages: byId(older.pages || [], newer.pages || []),
     notify: newer.notify || older.notify,
     dayHours: newer.dayHours || older.dayHours,
+    focus: newer.focus,
     onboarded: newer.onboarded || older.onboarded,
     updatedAt: Date.now(),
   };
