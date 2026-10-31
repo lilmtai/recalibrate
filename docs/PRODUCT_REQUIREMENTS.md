@@ -1,0 +1,122 @@
+# Product requirements and current status
+
+Status: **Done** · **Partial** (exists but short of the spec) · **Missing**.
+Audit date: 2026-10-31 (commit `6b1f534`). Priorities P0 / P1 / P2 from the product spec.
+Backlog items in `ROADMAP.md` reference these IDs.
+
+## Module 1 · Daily planner (P0)
+
+| ID | Requirement | Status | Notes / where |
+| --- | --- | --- | --- |
+| DP-1 | Block types: **fixed**, **flexible**, **floating** | Partial | Flexible = timed blocks (`Task`). Floating = to-dos (`Note`) and free blocks (`FreeItem`). No "fixed" flag; nothing stops moving an appointment. |
+| DP-2 | Block fields: title, description, start/end, est. duration, priority, category, energy, starting difficulty, recurrence, deadline, minimum acceptable duration, can-postpone | Partial | Have: title, start, finish/duration, category (5 areas), energy, "if not" fallback (≈ minimum version), weekly recurrence (routines). Missing: description, priority, starting difficulty, deadline, minimum duration in minutes, can-postpone. |
+| DP-3 | Don't fit a 60-min task in a 20-min gap | Missing | No constraint engine; blocks can overlap freely. |
+| DP-4 | Transition buffers around high-focus blocks | Missing | |
+| DP-5 | Fixed appointments preserved | Missing | Depends on DP-1. |
+| DP-6 | Recurring tasks never silently disappear | Done | Routines are generated per day (`tasksFor`); edits ask "this day / every week". |
+| DP-7 | No automatic overflow of unfinished work into tomorrow | Partial | Timed blocks don't roll over (good). **To-dos do roll over automatically** ("since Mon") → conflicts with spec; needs a "review unfinished" step. |
+| DP-8 | Daily capacity limited by realistic available time | Missing | Day hours exist (`dayHours`), not used for capacity. |
+| DP-9 | Capacity indicator: available / planned / buffer / unallocated | Missing | |
+| DP-10 | Overload warning when planned > available | Missing | |
+| DP-11 | Finish can't be before start | Done | `BlockSheet`. |
+
+## Module 2 · Time awareness (P0)
+
+| ID | Requirement | Status | Notes / where |
+| --- | --- | --- | --- |
+| TA-1 | Live countdown for the current block | Done | Now card (`DayView` → `NowCard`). |
+| TA-2 | Visual progress through the current hour | Partial | Progress bar per block and a "now" line on the timeline; no hour-progress view. |
+| TA-3 | Notifications before transitions | Done | 5-min "starts soon" (push + in-app). |
+| TA-4 | Hourly execution check-ins | Done | WYD on the hour during waking hours. |
+| TA-5 | Actual start and finish timestamps | Missing | Only outcome + "how long did it take" chips. Needs a Start action (EX-2). |
+| TA-6 | Estimated vs actual duration | Done | Actual-time chips → time multiplier, per-block estimates in Insights. |
+| TA-7 | Optional overtime confirmation | Missing | |
+| TA-8 | Automatic recording of unplanned activity | Partial | Logged via WYD / My day, but only when the user answers. |
+| TA-9 | Notification modes: strict / adaptive / minimal | Missing | Per-type on/off switches exist (`NotifyPrefs`). |
+
+## Module 3 · Task execution and starting (P0)
+
+| ID | Requirement | Status | Notes / where |
+| --- | --- | --- | --- |
+| EX-1 | Subtasks on any task | Partial | Steps exist for **projects** (Work tab), not for blocks. |
+| EX-2 | Prominent **Start** button: record start, show first action, focus mode, timer | Missing | "What I'm doing right now" in My day is a partial stand-in. |
+| EX-3 | 5-minute starting commitment | Missing | |
+| EX-4 | Focus mode: only current task, time left, next up, distraction capture, pause / finish / extend | Missing | |
+
+## Module 4 · Check-ins and execution tracking (P0)
+
+| ID | Requirement | Status | Notes / where |
+| --- | --- | --- | --- |
+| CI-1 | Capture planned activity, actual activity, completion, reason, notes, energy, duration | Partial | Completion (done / partly / "if not" / not done), reason, what-instead, note, daily energy + sleep, actual duration. Planned vs actual are linked by `taskId` on log entries. |
+| CI-2 | Standard reason list | Partial | Ours: low energy, bloated/hungry, overwhelmed, lost track of time, forgot, avoiding it, poor sleep, something came up. **Add:** distraction, hard to start, took longer than planned, other. Keep the owner's own (bloated, poor sleep). |
+| CI-3 | Attempted-but-unfinished vs never-started | Partial | "Partly done" vs "Didn't happen" approximates it; no explicit "never started" with start timestamps (TA-5). |
+| CI-4 | One-tap check-in (5–10 s); more questions only when needed | Done | `AskSheet`, `WhySheet`, `WydSheet`, notification buttons. |
+| CI-5 | Distraction inbox: capture without leaving; processed later, never auto-scheduled | Partial | Quick to-do (+ button) and Work → Capture exist, but they go straight to to-dos/projects; no separate inbox to process. |
+
+## Module 5 · Recovery engine (P0)
+
+| ID | Requirement | Status | Notes / where |
+| --- | --- | --- | --- |
+| RE-1 | Recompute the rest of the day from remaining time, fixed commitments, priorities, deadlines, durations, energy, buffers | Missing | Manual tools only: Reorganize (drag, resize), tray, "clear the rest of today". |
+| RE-2 | Scenario handling (late start, overrun, missed gym, low energy, new appointment, too much left) | Partial | Low-energy day dims high-energy blocks and shows "if not" versions; "never miss twice" banner. Nothing proposes a new schedule. |
+| RE-3 | **Minimum viable day** button | Missing | |
+| RE-4 | Proposal + approval UI ("Approve" / "Edit") | Missing | |
+
+## Module 6 · Behaviour intelligence (P1)
+
+| ID | Requirement | Status | Notes / where |
+| --- | --- | --- | --- |
+| BI-1 | Planned vs completed blocks | Done | Follow-through in Insights. |
+| BI-2 | Completion by category | Done | |
+| BI-3 | Average starting delay | Missing | Needs TA-5. |
+| BI-4 | Average task duration / estimated vs actual | Done | |
+| BI-5 | Most common interruption reasons | Done | "Why things didn't happen", "Where the time went instead". |
+| BI-6 | Rescheduling frequency | Missing | Needs schedule change history (DM rule 4). |
+| BI-7 | Weekly consistency (not streaks) | Missing | |
+| BI-8 | Pattern detection written as observations, not causes | Partial | "What the data says" covers sleep, energy, area, barriers, estimates, drift. Wording mostly avoids claiming causes. |
+| BI-9 | Personal experiments with tracked results | Partial | **Playbook rules** (if-then fixes with "worked X of Y") are an early form. No proposed experiments or start/end dates. |
+
+## Module 7 · Recurring and floating tasks (P0)
+
+| ID | Requirement | Status | Notes / where |
+| --- | --- | --- | --- |
+| RF-1 | Frequency | Done | Routines (weekdays), free blocks (every N days). |
+| RF-2 | Estimated duration, preferred time window, completion window, priority, flexibility, needs-appointment | Missing | Free blocks have frequency, next due, reminder time, area. |
+| RF-3 | Last completed / next due | Done | `FreeItem.lastDone`, `nextDue`. |
+| RF-4 | Show upcoming obligations and **suggest free slots** | Partial | Due items show on to-dos and the week; no slot suggestions. |
+| RF-5 | Never auto-convert to fixed appointments | Done | |
+
+## AI assistant (P1–P2)
+
+| ID | Capability | Status |
+| --- | --- | --- |
+| AI-1 | Schedule analysis / overload warnings | Missing (deterministic version comes first: DP-9, DP-10) |
+| AI-2 | Day recovery proposals | Missing (needs RE-1 engine) |
+| AI-3 | Task decomposition | Missing |
+| AI-4 | Duration estimation | Partial (deterministic multiplier exists) |
+| AI-5 | Weekly pattern insights | Missing (deterministic insights exist) |
+| AI-6 | Weekly planning | Missing |
+| AI-7 | Recurring-task scheduling options | Missing |
+| AI-8 | Natural-language planning assistant | Missing |
+
+Rules for all AI work: `AI_BEHAVIOUR.md`.
+
+## Beyond the spec (built at the owner's request; keep)
+
+| Feature | Where |
+| --- | --- |
+| Work tab: projects, one next step each, steps, journal, drafts, goals, quick capture | `WorkView`, `WorkSheets`, `lib/work.ts` |
+| Playbook: turn a miss into an if-then fix with a reminder, scored over time | `MissSheet`, `PlaybookView` |
+| "If not" fallback version for every block | `Task.ifNot`, `Routine.ifNot` |
+| Morning check-in (energy, sleep) feeding patterns | `CheckinRow` in `DayView` |
+| Post-it to-dos, drag onto the day | `TodoCard` |
+| One-tap notification answers that never open the app | `public/sw.js`, `lib/answers.ts` |
+| Installable phone app, sync, push notifications | PWA + Supabase |
+
+## Cross-platform (spec §5)
+
+| ID | Requirement | Status |
+| --- | --- | --- |
+| XP-1 | One account, synced data across desktop and mobile | Done (Supabase sync; see weaknesses in `DATA_MODEL.md`) |
+| XP-2 | Desktop: planning, analytics, detailed editing | Partial (works, but the layout is phone-first; no desktop week editing) |
+| XP-3 | Mobile: check-in, start task, capture in minimal taps | Partial (check-in and capture are fast; Start missing) |

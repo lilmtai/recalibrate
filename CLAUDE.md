@@ -4,6 +4,18 @@ A calm, premium ADHD planner for high achievers. Plan the day in blocks, log wha
 (one tap where possible), turn misses into if-then fixes, and learn from the patterns.
 Owner: Imam (GitHub `lilmtai`). Live: https://lilmtai.github.io/recalibrate/ (GitHub Pages, deploys on push to `main`).
 
+## Product docs (read before changing architecture)
+`docs/PRODUCT_VISION.md`, `docs/PRODUCT_REQUIREMENTS.md` (feature status: Done / Partial / Missing),
+`docs/DATA_MODEL.md` (current model, weaknesses, target), `docs/SCHEDULING_RULES.md`, `docs/AI_BEHAVIOUR.md`,
+`docs/UX_PRINCIPLES.md`, `docs/ROADMAP.md` (backlog with acceptance criteria; work it in order).
+Rules for every agent (Claude Code, Codex):
+- Never implement features that break the scheduling rules; the scheduling engine stays deterministic, separate from AI.
+- Preserve historical execution data; corrections are explicit.
+- No AI automation without an explicit user approval step.
+- Write tests for scheduling and recovery logic.
+- Update the docs (status tables, data model) whenever architecture or features change.
+- Work in commits between handoffs so agents can take turns.
+
 ## Stack
 - React 18 + TypeScript + Vite 5. No UI library; all styles in `src/index.css` (CSS variables).
 - Local-first: state in localStorage (`recalibrate.v1`), synced to Supabase when signed in.
@@ -57,8 +69,7 @@ Owner: Imam (GitHub `lilmtai`). Live: https://lilmtai.github.io/recalibrate/ (Gi
 ## Known limits / next steps
 - iPhone web push shows no action buttons; tapping opens a one-tap question (`AskSheet`). Native buttons need the App Store build.
 - Reminders are scheduled 7 days ahead whenever the plan changes; they stop if the app isn't opened for a week.
-- Next: App Store version with Capacitor (local notifications with actions, haptics), account deletion (Apple requirement),
-  privacy policy, custom SMTP, weekly plan-vs-reality review, focus timer.
+- Next: see `docs/ROADMAP.md` (Sprint 0 foundation first: tests, start/finish times, no auto-rollover, history tables).
 
 ## Conventions
 - Commit to `main` only when asked; deploy is automatic. End commit messages with the session's attribution lines.
