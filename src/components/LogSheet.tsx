@@ -67,7 +67,7 @@ export function LogSheet({ task }: { task: Task }) {
         <button className="pick" onClick={() => mark("done")}>Done</button>
         <button className="pick" onClick={() => open({ type: "miss", task, partial: true })}>Partly done</button>
         <button className="pick" onClick={() => mark("ifnot")}>Did the "if not" version{task.ifNot ? `: ${task.ifNot}` : ""}</button>
-        <button className="pick" onClick={() => open({ type: "miss", task })}>Didn't happen</button>
+        <button className="pick" onClick={() => open({ type: "why", task })}>Didn't happen</button>
       </div>
       <div className="actions">
         <button className="btn ghost" onClick={tomorrow}>Move to tomorrow</button>

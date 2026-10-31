@@ -32,7 +32,7 @@ export function AskSheet({ task, kind }: { task: Task; kind: string }) {
           <>
             <button className="btn primary big" onClick={done}>Done</button>
             <button className="btn big" onClick={() => open({ type: "miss", task, partial: true })}>Partly</button>
-            <button className="btn big" onClick={() => open({ type: "miss", task })}>Not done</button>
+            <button className="btn big" onClick={() => open({ type: "why", task })}>Not done</button>
           </>
         ) : (
           <>

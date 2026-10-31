@@ -16,12 +16,12 @@ const toggleIn = <T,>(arr: T[], v: T) => (arr.includes(v) ? arr.filter((x) => x 
  * Log a block that didn't (fully) happen: what filled the time, why, and an optional fix.
  * Also edits an existing rule when `rule` is passed.
  */
-export function MissSheet({ task, rule, partial }: { task?: Task; rule?: Rule; partial?: boolean }) {
+export function MissSheet({ task, rule, partial, barrier: initialBarrier }: { task?: Task; rule?: Rule; partial?: boolean; barrier?: BarrierKey }) {
   const { update, close, toast } = useApp();
   const [share, setShare] = useState<number | undefined>(partial ? undefined : 0);
   const [instead, setInstead] = useState<InsteadKey[]>([]);
   const [insteadNote, setInsteadNote] = useState("");
-  const [barrier, setBarrier] = useState<BarrierKey | undefined>(rule?.barrier);
+  const [barrier, setBarrier] = useState<BarrierKey | undefined>(rule?.barrier ?? initialBarrier);
   const [fix, setFix] = useState(rule?.fix || "");
   const [remind, setRemind] = useState<Remind>(rule?.remind || { kind: "before", lead: 60 });
   const [match, setMatch] = useState(rule?.match || norm(task?.title || "").split(" ")[0]);

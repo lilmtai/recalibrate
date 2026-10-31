@@ -52,7 +52,7 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
   const isRoutine = repeat || !!routine;
   const inRoutineInstance = !!task?.routineId;
 
-  function save() {
+  function save(everyWeek = false) {
     if (!title.trim()) return setError("Give the block a name.");
     if (!start) return setError("Pick a start time.");
     if (isRoutine && !days.length) return setError("Pick at least one day for the routine.");
@@ -66,6 +66,12 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
       if (isRoutine && !task) {
         if (routine) Object.assign(s.routines.find((r) => r.id === routine.id)!, data, { days });
         else s.routines.push({ id: uid(), ...data, days: [...days].sort(), since: date || today() });
+      } else if (task && everyWeek && task.routineId) {
+        // change the routine itself, so every week follows
+        const r = s.routines.find((x) => x.id === task.routineId);
+        if (r) Object.assign(r, data);
+        const real = s.tasks.find((x) => x.id === task.id);
+        if (real) Object.assign(real, data);
       } else if (task) {
         Object.assign(materialize(s, task), data);
       } else {
@@ -73,7 +79,8 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
       }
       if (fromNote) s.notes = s.notes.filter((n) => n.id !== fromNote);
     });
-    toast(isRoutine && !task ? (routine ? "Routine updated." : `Routine added: ${days.map((x) => DAY_SHORT[x]).join(", ")}.`) : "Saved.");
+    toast(isRoutine && !task ? (routine ? "Routine updated." : `Routine added: ${days.map((x) => DAY_SHORT[x]).join(", ")}, every week.`)
+      : everyWeek ? "Saved for every week." : inRoutineInstance ? "Saved for this day only." : "Saved.");
     close();
   }
 
@@ -118,21 +125,35 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
         <input id="b-ifnot" value={ifNot} onChange={(e) => setIfNot(e.target.value)} placeholder="20-minute walk" /></div>
 
       {!task && !routine && !routineMode && (
-        <label className="toggle"><input type="checkbox" checked={repeat} onChange={(e) => setRepeat(e.target.checked)} /> Repeat this block (make it a routine)</label>
+        <div className="field"><span>Repeat</span>
+          <div className="seg" role="group">
+            <button type="button" aria-pressed={!repeat} onClick={() => setRepeat(false)}>Just once</button>
+            <button type="button" aria-pressed={repeat} onClick={() => setRepeat(true)}>Every week</button>
+          </div>
+        </div>
       )}
       {isRoutine && !task && (
         <div className="field"><span>Repeats on</span>
           <Chips multi options={DAY_SHORT.map((l, i) => ({ key: i, label: l }))} value={days}
             onChange={(i) => setDays((d) => (d.includes(i) ? d.filter((x) => x !== i) : [...d, i]))} /></div>
       )}
-      {inRoutineInstance && <div className="hint">This is a routine block. Changes here apply to this day only. Edit the routine itself in the Routines tab.</div>}
+      {inRoutineInstance && <div className="hint">This block comes from a routine. Save the change for this day only, or for every week.</div>}
       {error && <div className="error" role="alert">{error}</div>}
 
       <div className="actions">
         {(task || routine) && <button className="btn ghost" onClick={remove}>{routine ? "Delete routine" : inRoutineInstance ? "Skip this day" : "Delete"}</button>}
         <span className="spacer" />
-        <button className="btn" onClick={close}>Cancel</button>
-        <button className="btn primary" onClick={save}>Save</button>
+        {inRoutineInstance ? (
+          <>
+            <button className="btn" onClick={() => save(false)}>This day only</button>
+            <button className="btn primary" onClick={() => save(true)}>Every week</button>
+          </>
+        ) : (
+          <>
+            <button className="btn" onClick={close}>Cancel</button>
+            <button className="btn primary" onClick={() => save()}>Save</button>
+          </>
+        )}
       </div>
     </Sheet>
   );

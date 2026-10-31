@@ -1,5 +1,5 @@
 /* Recalibrate service worker: offline app shell + push notifications. */
-const CACHE = "recalibrate-v3";
+const CACHE = "recalibrate-v4";
 // answers given straight from a notification, applied by the app when it next runs
 const PENDING = "recalibrate-pending";
 
@@ -45,7 +45,8 @@ self.addEventListener("push", (event) => {
   const actions =
     d.kind === "start" ? [{ action: "on", title: "I'm on it" }, { action: "check", title: "Not doing it" }]
     : d.kind === "mid" ? [{ action: "on", title: "Still on it" }, { action: "check", title: "Doing something else" }]
-    : d.kind === "end" ? [{ action: "done", title: "Done" }, { action: "log", title: "Not done" }]
+    : d.kind === "end" ? [{ action: "done", title: "Done" }, { action: "why", title: "Not done" }]
+    : d.kind === "free" ? [{ action: "fdone", title: "Done" }, { action: "flater", title: "Tomorrow" }]
     : [];
   event.waitUntil(
     self.registration.showNotification(d.title || "Recalibrate", {
@@ -62,7 +63,7 @@ self.addEventListener("push", (event) => {
 
 // Save a one-tap answer for the app and tell any open window right away.
 async function remember(action, url) {
-  const answer = { act: action, task: url.searchParams.get("task"), date: url.searchParams.get("date"), at: Date.now() };
+  const answer = { act: action, task: url.searchParams.get("task"), free: url.searchParams.get("free"), date: url.searchParams.get("date"), at: Date.now() };
   const cache = await caches.open(PENDING);
   await cache.put(new Request(`pending/${answer.at}-${Math.random().toString(36).slice(2, 8)}`), new Response(JSON.stringify(answer)));
   const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
@@ -75,12 +76,12 @@ self.addEventListener("notificationclick", (event) => {
   const data = event.notification.data || {};
   const url = new URL(data.url || "./", self.registration.scope);
   // "I'm on it" / "Still on it" / "Done": log it quietly, don't open the app
-  if (event.action === "on" || event.action === "done") {
+  if (["on", "done", "fdone", "flater"].includes(event.action)) {
     event.waitUntil(remember(event.action, url));
     return;
   }
   // a tap on the notification itself (iPhone has no buttons): open a one-tap question
-  const action = event.action || (data.kind === "start" || data.kind === "mid" || data.kind === "end" ? "ask" : "");
+  const action = event.action || (data.kind === "start" || data.kind === "mid" || data.kind === "end" || data.kind === "free" ? "ask" : "");
   if (action) url.searchParams.set("do", action);
   if (data.kind) url.searchParams.set("kind", data.kind);
   event.waitUntil(

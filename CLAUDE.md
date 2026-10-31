@@ -23,9 +23,14 @@ Owner: Imam (GitHub `lilmtai`). Live: https://lilmtai.github.io/recalibrate/ (Gi
 - `src/lib/actuals.ts`: "My day" entries written from block outcomes (`syncActuals`) + day summary.
 - `src/lib/answers.ts`: applies one-tap notification answers saved by the service worker (`recalibrate-pending` cache).
 - `src/lib/stats.ts`, `src/lib/push.ts`, `src/lib/time.ts`, `src/constants.ts`, `src/example.ts` (example week, flagged `ex`).
-- `src/components/`: `DayView` (Today: check-in, timeline, reorganize + tray, to-dos), `Timeline`, `MyDayView`, `WeekView`,
+- Free blocks (`FreeItem` in `state.free`): no set time, repeat every N days, show as due in the to-do card,
+  remind at `remindAt` daily while due/overdue (`cuesFor` kind `free`), Done moves `nextDue` forward (`lib/actions.ts`).
+- Sheets: `Sheet` has a grab handle (swipe down), ← back (panel stack in `App`), ✕ close; the phone back gesture closes it.
+- `src/components/`: `DayView` (Today: check-in, timeline, reorganize + tray, to-dos + due free blocks), `Timeline`, `MyDayView`, `WeekView`,
   `PatternsView`, `PlaybookView`, `MeView` (routines, day hours, account, phone app, example data), and the sheets
-  (`BlockSheet`, `LogSheet`, `MissSheet`/`CheckSheet`, `AskSheet`, `EntrySheet`, `QuickSheet`, `WelcomeSheet`, `SetupSheet`, `AccountSheet`).
+  (`BlockSheet`, `LogSheet`, `WhySheet` (one-tap reason), `MissSheet`/`CheckSheet`, `AskSheet`, `FreeSheet`/`FreeDueSheet`,
+  `EntrySheet`, `QuickSheet`, `WelcomeSheet`, `SetupSheet` (+ `lib/pushCheck.ts` "Check notifications"), `AccountSheet`).
+- Routine instances: editing asks "This day only" vs "Every week"; moving one in Reorganize offers "Every week" in a toast.
 - `supabase/schema.sql`, `supabase/push.sql`, `supabase/functions/send-push/index.ts`: server side (run/deployed by the owner in the dashboard).
 
 ## Design rules
@@ -38,7 +43,8 @@ Owner: Imam (GitHub `lilmtai`). Live: https://lilmtai.github.io/recalibrate/ (Gi
 
 ## Owner-side setup status (Supabase dashboard)
 - `schema.sql`: done (sync works).
-- `push.sql` + `send-push` function + secrets (VAPID keys, CRON_SECRET): steps were given to the owner; confirm they're done if push fails.
+- `push.sql` + `send-push` function + secrets: done; the test notification arrives on the owner's iPhone.
+  If reminders don't arrive, run Me → Phone app & notifications → Check notifications (it uploads and lists the schedule).
   The VAPID private key and cron secret are NOT in the repo; only the public key is (`src/lib/push.ts`).
 - Email templates can't be edited without custom SMTP, so the emailed code isn't sent. Sign-in uses email + password instead.
   Recommended: Authentication → Sign In / Providers → Email → turn OFF "Confirm email" (or set up SMTP: Gmail app password or Resend).

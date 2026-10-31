@@ -110,6 +110,22 @@ export interface Actual {
   ex?: boolean;
 }
 
+/**
+ * A free block: something with no set time that comes back every N days
+ * (barbershop every 2 weeks). It shows up as due on your to-do list and reminds you.
+ */
+export interface FreeItem {
+  id: string;
+  title: string;
+  category: CategoryKey;
+  /** 0 = just once */
+  everyDays: number;
+  nextDue: string; // YYYY-MM-DD
+  remindAt: string; // HH:MM
+  lastDone?: string;
+  ex?: boolean;
+}
+
 /** Which notifications to send when the app is closed (synced across devices). */
 export interface NotifyPrefs {
   enabled: boolean;
@@ -117,6 +133,7 @@ export interface NotifyPrefs {
   mid: boolean; // halfway "still on it?"
   end: boolean; // "log what happened"
   fix: boolean; // reminders from your fixes
+  free?: boolean; // free blocks that are due
 }
 
 export interface State {
@@ -127,6 +144,7 @@ export interface State {
   checkins: Record<string, CheckIn>;
   notes: Note[];
   actuals: Actual[];
+  free: FreeItem[];
   notify?: NotifyPrefs;
   /** usual waking hours; the timeline folds away the rest */
   dayHours?: { start: string; end: string };
@@ -143,6 +161,7 @@ export interface Cue {
   forTask: string;
   barrier?: BarrierKey;
   tomorrow: boolean;
-  kind: "fix" | "transition" | "mid" | "end";
+  kind: "fix" | "transition" | "mid" | "end" | "free";
   taskId?: string;
+  freeId?: string;
 }

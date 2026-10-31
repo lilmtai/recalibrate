@@ -3,11 +3,12 @@ import { useApp } from "../ctx";
 import { BARRIER_LABEL, INSTEAD_LABEL } from "../constants";
 import type { Task } from "../types";
 import { addDays, DAY_SHORT, fmt, fmtDur, norm, nowMin, parseKey, toMin, today, uid, weekday } from "../lib/time";
-import { cuesFor, materialize, needsLog, notesFor, tasksFor, unplacedFor } from "../lib/plan";
+import { cuesFor, everyLabel, freeDue, materialize, needsLog, notesFor, tasksFor, unplacedFor } from "../lib/plan";
+import { freeDone, freeLater } from "../lib/actions";
 import { isWin } from "../lib/stats";
 import { HOUR, snap, Timeline } from "./Timeline";
 
-type TrayItem = { kind: "note" | "task"; id: string; title: string; dur: number };
+type TrayItem = { kind: "note" | "task" | "free"; id: string; title: string; dur: number };
 type Ghost = TrayItem & { x: number; y: number; moved: boolean };
 
 export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
@@ -35,7 +36,11 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
   const place = (item: TrayItem, minute: number) => {
     const start = fmt(Math.min(1440 - item.dur, Math.max(0, snap(minute))));
     update((s) => {
-      if (item.kind === "note") {
+      if (item.kind === "free") {
+        const f = s.free.find((x) => x.id === item.id);
+        s.tasks.push({ id: uid(), date, title: item.title, start, dur: item.dur, category: f?.category || "me", status: "open" });
+        if (f) freeDone(s, f.id, date);
+      } else if (item.kind === "note") {
         s.notes = s.notes.filter((n) => n.id !== item.id);
         s.tasks.push({ id: uid(), date, title: item.title, start, dur: item.dur, category: "work", status: "open" });
       } else {
@@ -225,6 +230,7 @@ function TodoCard({ date, isToday, drag, selected }: {
   const { state, update, open, celebrate } = useApp();
   const [text, setText] = useState("");
   const notes = notesFor(state, date, isToday);
+  const due = freeDue(state, date, isToday);
   const add = () => {
     const t = text.trim();
     if (!t) return;
@@ -245,11 +251,26 @@ function TodoCard({ date, isToday, drag, selected }: {
 
   return (
     <div className="card postit">
-      <div className="sechead"><h2>To do {isToday ? "today" : DAY_SHORT[weekday(date)]}</h2><span className="small muted">{notes.filter((n) => !n.done).length} open</span></div>
+      <div className="sechead"><h2>To do {isToday ? "today" : DAY_SHORT[weekday(date)]}</h2><span className="small muted">{notes.filter((n) => !n.done).length + due.length} open</span></div>
       <div className="addnote">
         <input id="note-new" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()}
           placeholder="Add a to-do… (Enter)" aria-label="New to-do" />
       </div>
+      {due.length > 0 && (
+        <ul className="notes freelist">
+          {due.map((f) => (
+            <li key={f.id} className={selected?.id === f.id ? "sel" : ""} style={{ "--c": `var(--c-${f.category})` } as CSSProperties}>
+              <input type="checkbox" checked={false} onChange={() => { update((s) => freeDone(s, f.id, today())); celebrate(); }} aria-label={`Done: ${f.title}`} />
+              <button className="grow freename" onClick={() => open({ type: "freedue", id: f.id })}>
+                <span className="swatch" />{f.title}
+                <span className="chip">{f.nextDue < date ? "overdue" : "due"}{f.everyDays ? ` · every ${everyLabel(f.everyDays)}` : ""}</span>
+              </button>
+              <button className="iconbtn" title="Tomorrow" aria-label={`Move ${f.title} to tomorrow`} onClick={() => update((s) => freeLater(s, f.id, today()))}>→</button>
+              <span className="grip" title="Drag onto the day to give it a time" {...handle({ kind: "free", id: f.id, title: f.title, dur: 60 })}>⋮⋮</span>
+            </li>
+          ))}
+        </ul>
+      )}
       <ul className="notes">
         {notes.map((n) => (
           <li key={n.id} className={`${n.done ? "done" : ""} ${selected?.id === n.id ? "sel" : ""}`}>

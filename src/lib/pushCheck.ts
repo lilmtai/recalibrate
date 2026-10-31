@@ -14,7 +14,11 @@ const errText = (e: unknown) => {
  * permission → this phone's subscription → saved in Supabase → reminders scheduled →
  * the every-minute timer + send-push function actually send a test.
  */
-export async function checkNotifications(userId: string | null, onUpdate: (steps: CheckStep[]) => void) {
+export async function checkNotifications(
+  userId: string | null,
+  onUpdate: (steps: CheckStep[]) => void,
+  opts: { remindersOn: boolean; turnOnReminders: () => void; uploadQueue: (force?: boolean) => Promise<{ count: number; error: string | null }> },
+) {
   const steps: CheckStep[] = [];
   const push = (s: CheckStep) => { steps.push(s); onUpdate([...steps]); return steps.length - 1; };
   const set = (i: number, s: Partial<CheckStep>) => { steps[i] = { ...steps[i], ...s }; onUpdate([...steps]); };
@@ -55,9 +59,17 @@ export async function checkNotifications(userId: string | null, onUpdate: (steps
     push({ label: "Phone saved in Supabase", status: "ok", note: "It wasn't saved before; saved it now." });
   } else push({ label: "Phone saved in Supabase", status: "ok" });
 
-  const queued = await supabase.from("push_queue").select("id", { count: "exact", head: true }).eq("sent", false).gte("send_at", new Date().toISOString());
-  if (queued.error) push({ label: "Reminders scheduled", status: "fail", note: errText(queued.error) });
-  else push({ label: "Reminders scheduled", status: queued.count ? "ok" : "skip", note: queued.count ? `${queued.count} upcoming` : "None upcoming (no open blocks in the next 7 days, or they haven't uploaded yet)." });
+  // reminders for your plan: make sure they're switched on and uploaded now
+  if (!opts.remindersOn) { opts.turnOnReminders(); await sleep(400); }
+  const up = await opts.uploadQueue(true);
+  if (up.error) push({ label: "Reminders scheduled", status: "fail", note: up.error });
+  else {
+    const queued = await supabase.from("push_queue").select("send_at, title").eq("sent", false).neq("kind", "test").gte("send_at", new Date().toISOString()).order("send_at").limit(1);
+    const next = queued.data?.[0];
+    push({ label: "Reminders scheduled", status: up.count ? "ok" : "skip",
+      note: up.count ? `${up.count} in the next 7 days${next ? `. Next: “${next.title}” at ${new Date(next.send_at).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" })}` : ""}${!opts.remindersOn ? " (they were switched off; now on)" : ""}`
+        : "Nothing to remind you about in the next 7 days. Add a block or routine with a time." });
+  }
 
   // send a test and watch whether the server picks it up
   const tag = `test|${Date.now()}`;

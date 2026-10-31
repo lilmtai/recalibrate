@@ -11,6 +11,8 @@ type Push = {
   supported: boolean; subscribed: boolean; permission: string;
   enable: () => Promise<PushResult>; disable: () => Promise<void>; test: () => Promise<string>;
   problem: { hint: string; detail: string } | null;
+  uploadQueue: (force?: boolean) => Promise<{ count: number; error: string | null }>;
+  queueError: string | null;
 };
 
 const KINDS: { key: keyof NotifyPrefs; label: string; sub: string }[] = [
@@ -18,6 +20,7 @@ const KINDS: { key: keyof NotifyPrefs; label: string; sub: string }[] = [
   { key: "mid", label: "Halfway check-in", sub: "“Still on it?” with one-tap answers" },
   { key: "end", label: "End of a block", sub: "“Log what really happened”" },
   { key: "fix", label: "Reminders from your fixes", sub: "Like “Set an alarm for tomorrow” at 21:00" },
+  { key: "free", label: "Free blocks that are due", sub: "Like “Barbershop is due”" },
 ];
 
 function Step({ n, done, title, children }: { n: number; done: boolean; title: string; children: ReactNode }) {
@@ -38,7 +41,13 @@ export function SetupSheet({ install, push, signedIn, email, userId }: { install
   const runCheck = async () => {
     setChecking(true);
     setCheck([]);
-    try { await checkNotifications(userId, setCheck); } finally { setChecking(false); }
+    try {
+      await checkNotifications(userId, setCheck, {
+        remindersOn: !!state.notify?.enabled,
+        turnOnReminders: () => update((s) => { s.notify = { ...DEFAULT_NOTIFY, ...s.notify, enabled: true }; }),
+        uploadQueue: push.uploadQueue,
+      });
+    } finally { setChecking(false); }
   };
   const prefs = { ...DEFAULT_NOTIFY, ...state.notify };
   const needsInstallFirst = install.ios && !install.installed;
@@ -77,6 +86,9 @@ export function SetupSheet({ install, push, signedIn, email, userId }: { install
         </Step>
       </div>
       {msg && <div className="banner calm" style={{ marginTop: 12 }}><span>{msg}</span></div>}
+      {push.queueError && (
+        <div className="banner" style={{ marginTop: 12 }}><span>Your reminders couldn't be scheduled: {push.queueError}</span></div>
+      )}
       {push.problem && (
         <div className="banner" style={{ marginTop: 12 }}>
           <span>{push.problem.hint}</span>

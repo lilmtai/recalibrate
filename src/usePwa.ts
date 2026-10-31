@@ -48,6 +48,11 @@ export function usePush(userId: string | null, state: State, update: (fn: (s: St
   const [subscribed, setSubscribed] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">(supported ? Notification.permission : "unsupported");
   const lastQueue = useRef<string>("");
+  const [queueError, setQueueError] = useState<string | null>(null);
+  const hasNotify = useRef(!!state.notify);
+  hasNotify.current = !!state.notify;
+  const stateRef = useRef(state);
+  stateRef.current = state;
   /** what went wrong on the last "turn on", in plain words + the raw detail */
   const [problem, setProblem] = useState<{ hint: string; detail: string } | null>(null);
 
@@ -62,8 +67,10 @@ export function usePush(userId: string | null, state: State, update: (fn: (s: St
       const j = sub.toJSON();
       const { error } = await supabase.from("push_subscriptions").upsert({ endpoint: sub.endpoint, user_id: userId, p256dh: j.keys!.p256dh, auth: j.keys!.auth });
       if (error) setProblem({ hint: "This phone is subscribed, but Supabase couldn't save it. Run Check notifications for details.", detail: `${error.code ?? ""} ${error.message}`.trim() });
+      // a saved phone means reminders should be on (an earlier failed attempt may have left them off)
+      else if (!hasNotify.current) update((s) => { if (!s.notify) s.notify = { ...DEFAULT_NOTIFY }; });
     })();
-  }, [supported, userId]);
+  }, [supported, userId, update]);
 
   const enable = useCallback(async (): Promise<PushResult> => {
     if (!supported) return "unsupported";
@@ -124,18 +131,31 @@ export function usePush(userId: string | null, state: State, update: (fn: (s: St
     return error ? "error" : "ok";
   }, [userId]);
 
+  /** Upload the next 7 days of reminders. Returns how many, or the error. */
+  const uploadQueue = useCallback(async (force = false): Promise<{ count: number; error: string | null }> => {
+    if (!userId) return { count: 0, error: "Not signed in" };
+    const items = buildQueue(stateRef.current);
+    const key = JSON.stringify(items);
+    if (!force && key === lastQueue.current) return { count: items.length, error: null };
+    const { error } = await supabase.rpc("replace_push_queue", { items });
+    if (error) {
+      const msg = /function|schema cache|PGRST202/i.test(`${error.code} ${error.message}`)
+        ? "The replace_push_queue function is missing in Supabase. Run supabase/push.sql again."
+        : `${error.code ?? ""} ${error.message}`.trim();
+      setQueueError(msg);
+      return { count: 0, error: msg };
+    }
+    setQueueError(null);
+    lastQueue.current = key;
+    return { count: items.length, error: null };
+  }, [userId]);
+
   // keep the server's schedule in step with the plan (any signed-in device does this)
   useEffect(() => {
     if (!userId || !state.notify) return;
-    const t = setTimeout(async () => {
-      const items = buildQueue(state);
-      const key = JSON.stringify(items);
-      if (key === lastQueue.current) return;
-      const { error } = await supabase.rpc("replace_push_queue", { items });
-      if (!error) lastQueue.current = key;
-    }, 3000);
+    const t = setTimeout(() => { uploadQueue(); }, 3000);
     return () => clearTimeout(t);
-  }, [state, userId]);
+  }, [state, userId, uploadQueue]);
 
-  return { supported, subscribed, permission, enable, disable, test, problem };
+  return { supported, subscribed, permission, enable, disable, test, problem, uploadQueue, queueError };
 }

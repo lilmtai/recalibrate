@@ -1,14 +1,17 @@
 import { createContext, useContext } from "react";
-import type { Actual, Routine, Rule, State, Task } from "./types";
+import type { Actual, BarrierKey, FreeItem, Routine, Rule, State, Task } from "./types";
 
 export type SheetState =
   | { type: "block"; date: string; task?: Task; start?: string; title?: string; fromNote?: string }
   | { type: "routine"; routine?: Routine }
   | { type: "log"; task: Task }
   | { type: "actual"; taskId: string; planned: number }
-  | { type: "miss"; task: Task; partial?: boolean }
+  | { type: "miss"; task: Task; partial?: boolean; barrier?: BarrierKey }
   | { type: "check"; task: Task }
   | { type: "ask"; task: Task; kind: string }
+  | { type: "why"; task: Task }
+  | { type: "free"; item?: FreeItem }
+  | { type: "freedue"; id: string }
   | { type: "note"; noteId: string }
   | { type: "rule"; rule: Rule }
   | { type: "account" }
@@ -31,6 +34,9 @@ export interface AppCtx {
   setTab: (t: Tab) => void;
   open: (s: SheetState) => void;
   close: () => void;
+  /** go back to the panel that opened this one */
+  back: () => void;
+  canBack: boolean;
   toast: (msg: string, action?: ToastAction) => void;
   now: number; // minutes after midnight, ticks every 30 s
   /** gold check moment + a light vibration when something gets done */

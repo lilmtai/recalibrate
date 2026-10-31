@@ -29,6 +29,7 @@ export function merge(a: State, b: State): State {
     checkins: { ...older.checkins, ...newer.checkins },
     notes: byId(older.notes || [], newer.notes || []),
     actuals: byId(older.actuals || [], newer.actuals || []),
+    free: byId(older.free || [], newer.free || []),
     notify: newer.notify || older.notify,
     dayHours: newer.dayHours || older.dayHours,
     onboarded: newer.onboarded || older.onboarded,

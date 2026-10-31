@@ -1,10 +1,11 @@
 import type { State } from "../types";
 import { materialize, tasksFor } from "./plan";
-import { scoreRules } from "./actions";
+import { freeDone, freeLater, scoreRules } from "./actions";
 import { syncActuals } from "./actuals";
 
 const PENDING = "recalibrate-pending";
-type Answer = { act: "on" | "done"; task: string | null; date: string | null; at: number };
+type Answer = { act: "on" | "done" | "fdone" | "flater"; task: string | null; free?: string | null; date: string | null; at: number };
+const localDay = (ms: number) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 /**
  * Apply answers given straight from notification buttons ("I'm on it", "Done").
@@ -21,13 +22,22 @@ export async function applyNotificationAnswers(getState: () => State, update: (f
     try { answers.push({ key, a: await (await cache.match(key))!.json() }); } catch { await cache.delete(key); }
   }
   const s0 = getState();
-  const ready = answers.filter(({ a }) => a.task && a.date && tasksFor(s0, a.date).some((t) => t.id === a.task));
+  const isFree = (a: Answer) => a.act === "fdone" || a.act === "flater";
+  const ready = answers.filter(({ a }) => isFree(a) ? (s0.free || []).some((f) => f.id === a.free)
+    : a.task && a.date && tasksFor(s0, a.date).some((t) => t.id === a.task));
   // answers for blocks this device hasn't synced yet wait up to a day
   const stale = answers.filter((x) => !ready.includes(x) && Date.now() - x.a.at > 86_400_000);
   const logged: string[] = [];
   if (ready.length) {
     update((s) => {
       for (const { a } of ready.sort((x, y) => x.a.at - y.a.at)) {
+        if (isFree(a)) {
+          const f = s.free.find((x) => x.id === a.free);
+          if (!f) continue;
+          if (a.act === "fdone") { freeDone(s, f.id, localDay(a.at)); logged.push(`${f.title} done`); }
+          else { freeLater(s, f.id, localDay(a.at)); logged.push(`${f.title} moved to tomorrow`); }
+          continue;
+        }
         const t = tasksFor(s, a.date!).find((x) => x.id === a.task);
         if (!t || t.status !== "open") continue;
         const real = materialize(s, t);

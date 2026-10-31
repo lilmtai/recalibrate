@@ -444,3 +444,46 @@ table.est .num { font-size: 12.5px; white-space: nowrap; }
 .checklist .c-fail { background: var(--warn-soft); }
 .checklist .c-fail .cdot { background: var(--warn); color: var(--surface); }
 .checklist .c-wait .cdot { background: var(--gold-soft); color: var(--gold-text); }
+
+/* ---- fluid layer ---- */
+/* panel header: grab handle, back, close */
+.sheet { padding-top: 10px; transition: transform .22s cubic-bezier(.2, .8, .2, 1); }
+.sheethead { position: sticky; top: -10px; z-index: 2; margin: 0 -6px 6px; padding: 4px 0 2px; background: var(--surface); touch-action: none; cursor: grab; }
+.grabber { display: block; width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 6px; }
+@media (min-width: 700px) { .grabber { display: none; } }
+.sheetbar { display: flex; justify-content: space-between; align-items: center; }
+.roundbtn { width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--sunk); color: var(--fg); display: grid; place-items: center; }
+.roundbtn:hover { background: var(--line); }
+
+/* one-tap reasons */
+.whygrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+.whybtn { border: 1px solid var(--line); background: var(--surface); border-radius: 16px; padding: 16px 12px; font-size: 15px; font-weight: 600; text-align: left; min-height: 64px; }
+.whybtn:hover { border-color: var(--gold); }
+.whybtn.quiet { color: var(--muted); font-weight: 500; grid-column: 1 / -1; text-align: center; min-height: 0; }
+
+/* free blocks */
+.freelist { margin-bottom: 6px; }
+.freelist li { background: var(--surface); border: 1px solid var(--line); border-top: 1px solid var(--line); margin-top: 6px; }
+.freename { border: 0; background: none; text-align: left; padding: 0; font-weight: 600; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; }
+.wfree { border: 1px dashed var(--c); background: color-mix(in srgb, var(--c) 8%, var(--surface)); border-radius: 10px; padding: 5px 8px; font-size: 12px; font-weight: 600; text-align: left; }
+
+/* motion: tab fade, press feedback, smoother panels */
+@media (prefers-reduced-motion: no-preference) {
+  .view { animation: viewin .22s ease-out; }
+  @keyframes viewin { from { opacity: 0; transform: translateY(6px); } }
+  .overlay { animation: fadein .2s ease-out; }
+  @keyframes fadein { from { background: rgb(14 19 40 / 0); } }
+  .sheet { animation: sheetin .28s cubic-bezier(.2, .8, .2, 1); }
+  @keyframes sheetin { from { transform: translateY(40px); opacity: .4; } }
+  .btn, .pick, .chipbtn, .whybtn, .quick > button, .bottomnav button, .tabs button, .subnav button, .fab, .roundbtn, .block, .witem {
+    transition: transform .12s ease, background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+  }
+  .btn:active, .pick:active, .chipbtn:active, .whybtn:active, .quick > button:active, .roundbtn:active, .witem:active { transform: scale(.97); }
+  .fab:active { transform: scale(.94); }
+}
+
+/* bottom bar: soft pill behind the active tab */
+@media (max-width: 820px) {
+  .bottomnav button svg { padding: 3px 14px; border-radius: 999px; box-sizing: content-box; transition: background-color .2s ease; }
+  .bottomnav button[aria-selected="true"] svg { background: var(--gold-soft); }
+}

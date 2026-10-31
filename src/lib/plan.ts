@@ -81,6 +81,12 @@ export function cuesFor(s: State, date: string): Cue[] {
       if (r.remind.kind === "at" && r.remind.dayBefore) add(t, r, toMin(r.remind.time), true);
     }
   }
+  // free blocks: remind on the due day, and each day after while it's still not done
+  for (const f of s.free || []) {
+    if (f.nextDue > date) continue;
+    const every = f.everyDays ? `Every ${everyLabel(f.everyDays)}. Done, or tomorrow?` : "Done, or tomorrow?";
+    out.push({ key: `free:${f.id}`, at: toMin(f.remindAt || "10:00"), text: every, forTask: f.title, tomorrow: false, kind: "free", freeId: f.id });
+  }
   // one cue per fix per day, even if two blocks match
   const seen = new Set<string>();
   return out
@@ -94,3 +100,16 @@ export function cuesFor(s: State, date: string): Cue[] {
 }
 
 export const cueTime = (c: Cue) => fmt(c.at);
+
+/** "2 weeks", "month", "3 days" */
+export function everyLabel(days: number) {
+  if (days === 7) return "week";
+  if (days % 7 === 0 && days < 28) return `${days / 7} weeks`;
+  if (days === 30) return "month";
+  if (days % 30 === 0) return `${days / 30} months`;
+  return `${days} days`;
+}
+
+/** Free blocks to show on a day: due that day, or (on today) anything overdue. */
+export const freeDue = (s: State, date: string, isToday: boolean) =>
+  (s.free || []).filter((f) => (isToday ? f.nextDue <= date : f.nextDue === date)).sort((a, b) => a.nextDue.localeCompare(b.nextDue));

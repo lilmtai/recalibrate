@@ -20,6 +20,8 @@ import { MeView } from "./components/MeView";
 import { QuickSheet } from "./components/QuickSheet";
 import { WelcomeSheet } from "./components/WelcomeSheet";
 import { AskSheet } from "./components/AskSheet";
+import { WhySheet } from "./components/WhySheet";
+import { FreeDueSheet, FreeSheet } from "./components/FreeSheet";
 import { applyNotificationAnswers } from "./lib/answers";
 import { Icon } from "./components/Icon";
 import { useSync } from "./sync";
@@ -50,7 +52,11 @@ export default function App() {
     return saved === "routines" ? "me" : saved && VALID.includes(saved as Tab) ? (saved as Tab) : "day";
   });
   const [date, setDate] = useState(today());
-  const [sheet, setSheet] = useState<SheetState>(null);
+  const [sheet, setSheetRaw] = useState<SheetState>(null);
+  const [stack, setStack] = useState<SheetState[]>([]);
+  const sheetRef = useRef<SheetState>(null);
+  sheetRef.current = sheet;
+  const ignorePop = useRef(false);
   const [toasts, setToasts] = useState<{ id: number; msg: string; action?: ToastAction }[]>([]);
   const [party, setParty] = useState(0);
   const started = useRef(Date.now());
@@ -82,10 +88,42 @@ export default function App() {
     const t = setTimeout(() => setParty(0), 1200);
     return () => clearTimeout(t);
   }, [party]);
-  const close = useCallback(() => setSheet(null), []);
+  // Opening a panel from another one remembers the first, so ← Back returns to it.
+  // The first panel adds a browser history step, so the phone's back gesture closes it.
+  const setSheet = useCallback((next: SheetState) => {
+    const cur = sheetRef.current;
+    if (cur && next) setStack((st) => [...st, cur]);
+    if (!cur && next) { try { window.history.pushState({ sheet: true }, ""); } catch { /* ignore */ } }
+    if (!next) setStack([]);
+    sheetRef.current = next;
+    setSheetRaw(next);
+  }, []);
+  const close = useCallback(() => {
+    setStack([]);
+    sheetRef.current = null;
+    setSheetRaw(null);
+    if (window.history.state?.sheet) { ignorePop.current = true; window.history.back(); }
+  }, []);
+  const back = useCallback(() => {
+    setStack((st) => {
+      const prev = st[st.length - 1] ?? null;
+      sheetRef.current = prev;
+      setSheetRaw(prev);
+      return st.slice(0, -1);
+    });
+  }, []);
+  useEffect(() => {
+    const onPop = () => {
+      if (ignorePop.current) { ignorePop.current = false; return; }
+      if (sheetRef.current) { setStack([]); sheetRef.current = null; setSheetRaw(null); }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   // halfway → check-in panel, end of block → log panel
   const onCue = useCallback((c: Cue) => {
+    if (c.freeId) { setTab("day"); setSheet({ type: "freedue", id: c.freeId }); return; }
     const t = tasksFor(stateRef.current, today()).find((x) => x.id === c.taskId);
     if (!t || t.status !== "open") return;
     setTab("day");
@@ -122,6 +160,15 @@ export default function App() {
   useEffect(() => {
     const q = pendingLink.current;
     if (!q || (!q.get("do") && !q.get("date"))) { pendingLink.current = null; return; }
+    const freeId = q.get("free");
+    if (freeId) {
+      if (!state.free.some((f) => f.id === freeId) && Date.now() - started.current < 10_000) return;
+      pendingLink.current = null;
+      window.history.replaceState(null, "", window.location.pathname);
+      setTab("day");
+      if (state.free.some((f) => f.id === freeId)) setSheet({ type: "freedue", id: freeId });
+      return;
+    }
     const d = q.get("date") || today();
     const t = q.get("task") ? tasksFor(state, d).find((x) => x.id === q.get("task")) : undefined;
     if (q.get("task") && !t && Date.now() - started.current < 10_000) return; // wait for sync to bring it in
@@ -137,10 +184,11 @@ export default function App() {
     } else if (act === "check") setSheet({ type: "check", task: t });
     else if (act === "log") setSheet({ type: "log", task: t });
     else if (act === "ask") setSheet({ type: "ask", task: t, kind: q.get("kind") || "mid" });
-  }, [state, update, toast, setTab]);
+    else if (act === "why") setSheet({ type: "why", task: t });
+  }, [state, update, toast, setTab, setSheet]);
 
-  const ctx = useMemo(() => ({ state, update, date, setDate, setTab, open: setSheet, close, toast, now, celebrate }),
-    [state, update, date, setTab, close, toast, now, celebrate]);
+  const ctx = useMemo(() => ({ state, update, date, setDate, setTab, open: setSheet, close, back, canBack: stack.length > 0, toast, now, celebrate }),
+    [state, update, date, setTab, setSheet, close, back, stack.length, toast, now, celebrate]);
 
   const group = groupOf(tab);
   const isToday = date === today();
@@ -181,7 +229,7 @@ export default function App() {
 
         {group === "insights" && sub([["patterns", "Patterns"], ["playbook", "Playbook"]])}
 
-        <main>
+        <main key={tab} className="view">
           {tab === "day" && <DayView notificationsOn={push.subscribed} />}
           {tab === "myday" && <MyDayView />}
           {tab === "week" && <WeekView />}
@@ -205,7 +253,10 @@ export default function App() {
       {sheet?.type === "routine" && <BlockSheet routine={sheet.routine} routineMode />}
       {sheet?.type === "log" && <LogSheet task={sheet.task} />}
       {sheet?.type === "actual" && <ActualSheet taskId={sheet.taskId} planned={sheet.planned} />}
-      {sheet?.type === "miss" && <MissSheet key={sheet.task.id + String(sheet.partial)} task={sheet.task} partial={sheet.partial} />}
+      {sheet?.type === "miss" && <MissSheet key={sheet.task.id + String(sheet.partial) + (sheet.barrier || "")} task={sheet.task} partial={sheet.partial} barrier={sheet.barrier} />}
+      {sheet?.type === "why" && <WhySheet key={sheet.task.id} task={sheet.task} />}
+      {sheet?.type === "free" && <FreeSheet key={sheet.item?.id || "new"} item={sheet.item} />}
+      {sheet?.type === "freedue" && <FreeDueSheet id={sheet.id} />}
       {sheet?.type === "check" && <CheckSheet task={sheet.task} />}
       {sheet?.type === "rule" && <MissSheet rule={sheet.rule} />}
       {sheet?.type === "account" && <AccountSheet sync={sync} />}

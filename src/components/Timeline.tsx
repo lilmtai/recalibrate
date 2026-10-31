@@ -25,7 +25,7 @@ interface Props {
 
 /** The whole 24-hour day in a scrolling column. In reorganize mode, blocks can be dragged and resized. */
 export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ tasks, cues, lowDay, isToday, reorg, onSlot, from = 0, to = 1440 }, innerRef) {
-  const { open, update, now, date } = useApp();
+  const { open, update, now, date, toast } = useApp();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const y = (m: number) => ((m - from) / 60) * HOUR;
@@ -94,6 +94,12 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ ta
       real.start = fmt(d.start);
       real.dur = d.dur;
     });
+    if (t.routineId) {
+      toast(`Moved for today. Keep ${fmt(d.start)} every week?`, {
+        label: "Every week",
+        run: () => update((s) => { const r = s.routines.find((x) => x.id === t.routineId); if (r) { r.start = fmt(d.start); r.dur = d.dur; } }),
+      });
+    }
   };
   const toTray = (t: Task) => update((s) => { materialize(s, t).unplaced = true; });
 

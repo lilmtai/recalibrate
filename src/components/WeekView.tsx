@@ -74,6 +74,11 @@ export function WeekView() {
                       <span className="wt">{t.routineId && <span className="rt">↻</span>}{t.title}</span>
                     </button>
                   ))}
+                  {state.free.filter((f) => f.nextDue === d).map((f) => (
+                    <button key={f.id} className="wfree" style={{ "--c": `var(--c-${f.category})` } as CSSProperties} onClick={() => open({ type: "free", item: f })}>
+                      {f.title} · due
+                    </button>
+                  ))}
                   {fixes.length > 0 && (
                     <div className="wcue" title={fixes.map((c) => `${fmt(c.at)} ${c.text}`).join("\n")}>
                       {fixes.length} reminder{fixes.length > 1 ? "s" : ""} · first {fmt(fixes[0].at)}
