@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { useApp } from "../ctx";
-import { CATEGORIES, INSTEAD } from "../constants";
+import { categoriesOf, INSTEAD } from "../constants";
 import type { Actual, InsteadKey, Task } from "../types";
 import { addDays, fmt, fmtDur, fmtShort, toMin, today, uid } from "../lib/time";
 import { materialize, tasksFor } from "../lib/plan";
@@ -58,7 +58,7 @@ export function MyDayView() {
 
   // time by area, from what really happened
   const logged = acts.reduce((x, a) => x + Math.max(0, endOf(a) - a.start), 0);
-  const byCat = CATEGORIES.map((c) => ({ ...c, min: acts.filter((a) => a.category === c.key).reduce((x, a) => x + Math.max(0, endOf(a) - a.start), 0) }));
+  const byCat = categoriesOf(state).map((c) => ({ ...c, min: acts.filter((a) => a.category === c.key).reduce((x, a) => x + Math.max(0, endOf(a) - a.start), 0) }));
   const other = Math.max(0, logged - byCat.reduce((x, c) => x + c.min, 0));
   const max = Math.max(60, ...byCat.map((c) => c.min), other);
 

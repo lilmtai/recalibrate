@@ -1,9 +1,9 @@
 import { useApp } from "../ctx";
-import { CAT_LABEL, ENERGY_LABEL, INSTEAD_LABEL } from "../constants";
+import { catLabel, ENERGY_LABEL, INSTEAD_LABEL } from "../constants";
 import type { Task } from "../types";
 import { addDays, fmt, toMin, uid } from "../lib/time";
 import { materialize, remindLabel, rulesFor } from "../lib/plan";
-import { markEnded, scoreRules } from "../lib/actions";
+import { completeTask, markEnded, scoreRules } from "../lib/actions";
 import { startFocus } from "../lib/focus";
 import { today } from "../lib/time";
 import { syncActuals } from "../lib/actuals";
@@ -19,14 +19,14 @@ export function LogSheet({ task }: { task: Task }) {
     let id = "";
     update((s) => {
       const t = materialize(s, task);
-      t.status = status;
-      markEnded(t);
-      scoreRules(s, t, true);
+      if (status === "done") completeTask(s, t);
+      else { t.status = status; markEnded(t); scoreRules(s, t, true); }
       syncActuals(s, t);
       id = t.id;
     });
     celebrate();
-    if (status === "done") setTimeout(() => open({ type: "actual", taskId: id, planned: task.dur }));
+    if (status === "done" && !task.ongoing) setTimeout(() => open({ type: "actual", taskId: id, planned: task.dur }));
+    else if (status === "done") close();
     else { close(); toast("The 'if not' version counts. Momentum kept."); }
   };
   const tomorrow = () => {
@@ -52,7 +52,7 @@ export function LogSheet({ task }: { task: Task }) {
     close();
   };
 
-  const meta = [`${task.start}–${fmt(toMin(task.start) + task.dur)}`, CAT_LABEL[task.category], task.energy && `${ENERGY_LABEL[task.energy]} energy`, task.routineId && "Routine"]
+  const meta = [`${task.start}–${fmt(toMin(task.start) + task.dur)}`, catLabel(state, task.category), task.energy && `${ENERGY_LABEL[task.energy]} energy`, task.routineId && "Routine"]
     .filter(Boolean).join(" · ");
   return (
     <Sheet title={task.title} onClose={close}

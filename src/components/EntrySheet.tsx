@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useApp } from "../ctx";
-import { CATEGORIES, INSTEAD } from "../constants";
+import { categoriesOf, INSTEAD } from "../constants";
 import type { Actual, CategoryKey, InsteadKey } from "../types";
 import { fmt, toMin, uid } from "../lib/time";
 import { tasksFor } from "../lib/plan";
@@ -64,7 +64,7 @@ export function EntrySheet({ date, entry, start, end }: { date: string; entry?: 
           <input id="e-to" type="time" value={to} onChange={(e) => setTo(e.target.value)} /></div>
       </div>
       <div className="field"><span>Area <span className="opt">optional</span></span>
-        <Chips options={CATEGORIES.map((c) => ({ key: c.key, label: c.label, color: `var(--c-${c.key})` }))} value={category}
+        <Chips options={categoriesOf(state).map((c) => ({ key: c.key, label: `${c.emoji} ${c.label}`, color: `var(--c-${c.key})` }))} value={category}
           onChange={(k) => setCategory(category === k ? undefined : k)} /></div>
       {error && <div className="error" role="alert">{error}</div>}
       <div className="actions">

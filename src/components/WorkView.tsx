@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import { useApp } from "../ctx";
-import { CAT_LABEL } from "../constants";
+import { catLabel } from "../constants";
 import type { Page, Project, Step } from "../types";
 import { today, uid } from "../lib/time";
 import { activeProjects, JOURNAL, nextStep, nowIso, pagesOf, shortDate, stepsOf } from "../lib/work";
@@ -132,7 +132,7 @@ function ProjectCard({ p, onOpen }: { p: Project; onOpen: () => void }) {
   const goals = pagesOf(state, p.id, "goal").filter((g) => !g.achieved).length;
   return (
     <button className="card projcard" style={{ "--c": `var(--c-${p.area})` } as CSSProperties} onClick={onOpen}>
-      <div className="projtop"><span className="small muted">{CAT_LABEL[p.area]}</span>{p.status !== "active" && <span className="chip">{p.status === "paused" ? "Paused" : "Finished"}</span>}</div>
+      <div className="projtop"><span className="small muted">{catLabel(state, p.area)}</span>{p.status !== "active" && <span className="chip">{p.status === "paused" ? "Paused" : "Finished"}</span>}</div>
       <div className="projname">{p.name}</div>
       {p.why && <div className="small muted projwhy">{p.why}</div>}
       <div className="projnext"><b>Next:</b> {st ? st.text : "add a step"}</div>
@@ -193,7 +193,7 @@ function ProjectView({ project: p, onBack }: { project: Project; onBack: () => v
     <div className="work" style={{ "--c": `var(--c-${p.area})` } as CSSProperties}>
       <div className="daynav"><button className="btn ghost small" onClick={onBack}><Icon name="back" size={16} /> All projects</button></div>
       <section className="card projhead">
-        <div className="projtop"><span className="small muted">{CAT_LABEL[p.area]}</span><button className="btn small" onClick={() => open({ type: "project", project: p })}>Edit</button></div>
+        <div className="projtop"><span className="small muted">{catLabel(state, p.area)}</span><button className="btn small" onClick={() => open({ type: "project", project: p })}>Edit</button></div>
         <div className="projname big">{p.name}</div>
         {p.why && <div className="muted">{p.why}</div>}
         <div className="seg" role="group" style={{ marginTop: 12 }}>

@@ -26,6 +26,30 @@ export function freeLater(s: State, id: string, from: string) {
   if (f) f.nextDue = addDays(from, 1);
 }
 
+/**
+ * Mark a block done in one tap. An ongoing block becomes as long as it really ran (start → now).
+ * Mutates the draft; `t` must be the stored task (materialize a routine instance first).
+ */
+export function completeTask(s: State, t: Task, now: Date = new Date()) {
+  if (t.ongoing) {
+    const startMin = Number(t.start.slice(0, 2)) * 60 + Number(t.start.slice(3, 5));
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    t.dur = Math.max(5, nowMin - startMin);
+    t.actual = t.dur;
+    t.ongoing = undefined;
+  }
+  t.status = "done";
+  markEnded(t, now);
+  scoreRules(s, t, true);
+}
+
+/** Undo a one-tap done. */
+export function reopenTask(t: Task) {
+  t.status = "open";
+  t.endedAt = undefined;
+  t.actual = undefined;
+}
+
 /** Record the real start of a block (first time only). Mutates the draft task. */
 export function markStarted(t: Task, at: Date = new Date()) {
   if (!t.startedAt) t.startedAt = at.toISOString();

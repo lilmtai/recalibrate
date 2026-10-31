@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { freeDone, freeLater, markStarted, scoreRules, startState } from "./actions";
+import { completeTask, freeDone, freeLater, markStarted, reopenTask, scoreRules, startState } from "./actions";
 import { state, task, TODAY } from "../test/fixtures";
 
 describe("free block actions", () => {
@@ -44,5 +44,23 @@ describe("start and finish", () => {
     expect(startState(task({ status: "missed", startedAt: "2026-11-04T09:05:00Z" }))).toBe("started");
     expect(startState(task({ status: "partial" }))).toBe("started");
     expect(startState(task({ status: "done" }))).toBe("finished");
+  });
+});
+
+describe("one-tap done and ongoing blocks", () => {
+  it("an ongoing block becomes as long as it really ran", () => {
+    const s = state();
+    const t = task({ start: "14:00", dur: 30, ongoing: true });
+    completeTask(s, t, new Date(2026, 10, 4, 16, 10));
+    expect(t).toMatchObject({ status: "done", dur: 130, actual: 130 });
+    expect(t.ongoing).toBeUndefined();
+  });
+  it("a normal block keeps its planned length, and can be reopened", () => {
+    const s = state();
+    const t = task({ dur: 45 });
+    completeTask(s, t, new Date(2026, 10, 4, 10, 0));
+    expect(t).toMatchObject({ status: "done", dur: 45 });
+    reopenTask(t);
+    expect(t.status).toBe("open");
   });
 });

@@ -1,5 +1,5 @@
 import { useApp } from "../ctx";
-import { BARRIER_LABEL, CATEGORIES, INSTEAD_LABEL } from "../constants";
+import { BARRIER_LABEL, categoriesOf, INSTEAD_LABEL } from "../constants";
 import type { BarrierKey, InsteadKey } from "../types";
 import { fmtDur, norm } from "../lib/time";
 import { multiplier, stats14 } from "../lib/stats";
@@ -29,7 +29,7 @@ export function PatternsView() {
     insights.push(`After under 6 h of sleep you follow through **${s.shortSleep}%** of the time, compared with **${s.goodSleep}%** otherwise. Sleep is a lever.`);
   if (s.byEnergy.low != null && s.byEnergy.high != null && s.byEnergy.high - s.byEnergy.low >= 15)
     insights.push(`Low-energy days drop you to **${s.byEnergy.low}%**. Plan those days around “if not” versions.`);
-  const cats = CATEGORIES.filter((c) => s.byCategory[c.key] != null).sort((a, b) => s.byCategory[a.key]! - s.byCategory[b.key]!);
+  const cats = categoriesOf(state).filter((c) => s.byCategory[c.key] != null).sort((a, b) => s.byCategory[a.key]! - s.byCategory[b.key]!);
   if (cats.length >= 2 && s.byCategory[cats[cats.length - 1].key]! - s.byCategory[cats[0].key]! >= 20)
     insights.push(`**${cats[0].label}** is your weakest area at **${s.byCategory[cats[0].key]}%**, while ${cats[cats.length - 1].label.toLowerCase()} sits at ${s.byCategory[cats[cats.length - 1].key]}%.`);
   const topB = Object.entries(s.barriers).sort((a, b) => b[1] - a[1])[0];
@@ -71,7 +71,7 @@ export function PatternsView() {
           </div>
           <h2 style={{ marginTop: 18 }}>Follow-through by area</h2>
           <div className="bars">
-            {CATEGORIES.map((c) => (
+            {categoriesOf(state).filter((c) => s.byCategory[c.key] != null).map((c) => (
               <div key={c.key} className="hbar"><span>{c.label}</span><span className="track"><i style={{ width: `${s.byCategory[c.key] ?? 0}%`, background: `var(--c-${c.key})` }} /></span><span className="n">{s.byCategory[c.key] == null ? "—" : `${s.byCategory[c.key]}%`}</span></div>
             ))}
           </div>

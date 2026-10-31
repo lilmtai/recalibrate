@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { useApp } from "../ctx";
-import { CAT_LABEL } from "../constants";
+import { catLabel } from "../constants";
+import { suggestEmoji } from "../lib/emoji";
 import { DAY_SHORT, fmt, longDate, toMin, today } from "../lib/time";
 import { everyLabel } from "../lib/plan";
 
@@ -20,8 +21,8 @@ export function RoutinesView() {
         <div className="rules">
           {routines.map((r) => (
             <button key={r.id} className="card rule routine" style={{ "--c": `var(--c-${r.category})` } as CSSProperties} onClick={() => open({ type: "routine", routine: r })}>
-              <div className="if"><span className="swatch" />{CAT_LABEL[r.category]} · {r.start}–{fmt(toMin(r.start) + r.dur)}</div>
-              <div className="then">{r.title}</div>
+              <div className="if"><span className="swatch" />{catLabel(state, r.category)} · {r.start}–{fmt(toMin(r.start) + r.dur)}</div>
+              <div className="then">{r.emoji || suggestEmoji(r.title, r.category, state)} {r.title}</div>
               <div className="daydots">{DAY_SHORT.map((d, i) => <span key={d} className={r.days.includes(i) ? "on" : ""}>{d[0]}</span>)}</div>
               {r.ifNot && <div className="small muted" style={{ marginTop: 8 }}>If not: {r.ifNot}</div>}
             </button>

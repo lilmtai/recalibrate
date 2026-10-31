@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { useApp } from "../ctx";
-import { CATEGORIES } from "../constants";
-import type { CategoryKey } from "../types";
+import { categoriesOf } from "../constants";
+import { suggestEmoji } from "../lib/emoji";
 import { addDays, DAY_SHORT, fmt, fmtDur, norm, parseKey, today, uid, weekStart } from "../lib/time";
 import { cuesFor, tasksFor } from "../lib/plan";
 
@@ -11,8 +11,9 @@ export function WeekView() {
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
   const perDay = days.map((d) => tasksFor(state, d));
 
-  const hours: Record<CategoryKey, number> = { work: 0, health: 0, social: 0, side: 0, me: 0 };
-  perDay.flat().forEach((t) => (hours[t.category] += t.dur));
+  const cats = categoriesOf(state);
+  const hours: Record<string, number> = Object.fromEntries(cats.map((c) => [c.key, 0]));
+  perDay.flat().forEach((t) => (hours[t.category] = (hours[t.category] || 0) + t.dur));
   const total = Object.values(hours).reduce((a, b) => a + b, 0);
 
   const copyLastWeek = () => {
@@ -46,12 +47,12 @@ export function WeekView() {
       <div className="card balance">
         <div className="sechead"><h2>Week balance</h2><span className="small muted">{fmtDur(total)} planned</span></div>
         <div className="stack" role="img" aria-label="Planned time per category">
-          {CATEGORIES.filter((c) => hours[c.key]).map((c) => (
+          {cats.filter((c) => hours[c.key]).map((c) => (
             <i key={c.key} style={{ width: `${(hours[c.key] / total) * 100}%`, background: `var(--c-${c.key})` }} />
           ))}
         </div>
         <div className="legend">
-          {CATEGORIES.map((c) => (
+          {cats.filter((c) => hours[c.key]).map((c) => (
             <span key={c.key}><span className="swatch" style={{ "--c": `var(--c-${c.key})` } as CSSProperties} />{c.label} <b>{fmtDur(hours[c.key])}</b></span>
           ))}
         </div>
@@ -71,7 +72,7 @@ export function WeekView() {
                     <button key={t.id} className={`witem s-${t.status}`} style={{ "--c": `var(--c-${t.category})` } as CSSProperties}
                       onClick={() => open(d <= today() ? { type: "log", task: t } : { type: "block", date: d, task: t })}>
                       <span className="time">{t.start}</span>
-                      <span className="wt">{t.routineId && <span className="rt">↻</span>}{t.title}</span>
+                      <span className="wt">{t.emoji || suggestEmoji(t.title, t.category, state)} {t.title}{t.routineId && <span className="rt"> ↻</span>}</span>
                     </button>
                   ))}
                   {state.free.filter((f) => f.nextDue === d).map((f) => (

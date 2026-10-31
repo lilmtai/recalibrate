@@ -92,6 +92,7 @@ export function endFocus(s: State, now: Date, outcome: "done" | "partial") {
   if (t) {
     const real = materialize(s, t);
     real.status = outcome === "done" ? "done" : "partial";
+    if (real.ongoing) { real.dur = Math.max(5, spent); real.ongoing = undefined; }
     if (outcome === "partial") real.share = Math.min(0.75, Math.max(0.25, Math.round((spent / real.dur) * 4) / 4));
     else real.actual = spent;
     markEnded(real, now);

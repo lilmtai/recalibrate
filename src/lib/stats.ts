@@ -1,5 +1,6 @@
 import type { BarrierKey, CategoryKey, InsteadKey, State, Task } from "../types";
 import { addDays, today } from "./time";
+import { categoriesOf } from "../constants";
 import { startState } from "./actions";
 
 export const isWin = (t: Task) => t.status === "done" || t.status === "ifnot";
@@ -23,7 +24,7 @@ export function stats14(s: State) {
     (["low", "steady", "high"] as const).map((e) => [e, rate(ts.filter((t) => s.checkins[t.date]?.energy === e))]),
   ) as Record<"low" | "steady" | "high", number | null>;
   const byCategory = {} as Record<CategoryKey, number | null>;
-  (["work", "health", "social", "side", "me"] as CategoryKey[]).forEach((c) => (byCategory[c] = rate(ts.filter((t) => t.category === c))));
+  categoriesOf(s).forEach((c) => (byCategory[c.key] = rate(ts.filter((t) => t.category === c.key))));
   const byTask: Record<string, { n: number; miss: number; b: Partial<Record<BarrierKey, number>> }> = {};
   ts.forEach((t) => {
     const x = (byTask[t.title] ||= { n: 0, miss: 0, b: {} });

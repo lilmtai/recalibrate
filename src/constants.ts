@@ -1,13 +1,29 @@
-import type { BarrierKey, CategoryKey, Energy, InsteadKey, Remind } from "./types";
+import type { BarrierKey, Category, Energy, InsteadKey, Remind } from "./types";
 
-export const CATEGORIES: { key: CategoryKey; label: string }[] = [
-  { key: "work", label: "Main work" },
-  { key: "health", label: "Health" },
-  { key: "social", label: "Social" },
-  { key: "side", label: "Side hustle" },
-  { key: "me", label: "Me time" },
+/** Built-in categories. Colours are tuned for the ivory background; dark mode lightens them. */
+export const DEFAULT_CATEGORIES: Category[] = [
+  { key: "work", label: "Main work", color: "#2c49a6", emoji: "💼" },
+  { key: "side", label: "Side hustle", color: "#6e52a3", emoji: "🚀" },
+  { key: "health", label: "Health", color: "#2f8466", emoji: "🏃" },
+  { key: "social", label: "Social", color: "#b84d72", emoji: "🥂" },
+  { key: "me", label: "Me time", color: "#2c8799", emoji: "🧘" },
+  { key: "cooking", label: "Cooking", color: "#c0612b", emoji: "🍳" },
+  { key: "cleaning", label: "Cleaning", color: "#4f7f9e", emoji: "🧹" },
+  { key: "errands", label: "Errands", color: "#8a6a1f", emoji: "🛒" },
+  { key: "learning", label: "Learning", color: "#5b5fc7", emoji: "📚" },
+  { key: "admin", label: "Admin", color: "#5e6176", emoji: "🗂️" },
+  { key: "family", label: "Family", color: "#a3477e", emoji: "👨‍👩‍👧" },
+  { key: "rest", label: "Rest & sleep", color: "#3d5a80", emoji: "😴" },
 ];
-export const CAT_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.label])) as Record<CategoryKey, string>;
+/** For places with no access to your state (examples, onboarding). */
+export const CATEGORIES = DEFAULT_CATEGORIES;
+export const CAT_LABEL = Object.fromEntries(DEFAULT_CATEGORIES.map((c) => [c.key, c.label])) as Record<string, string>;
+
+/** Your categories (or the defaults), and lookups that never fail. */
+export const categoriesOf = (s: { categories?: Category[] }): Category[] => (s.categories?.length ? s.categories : DEFAULT_CATEGORIES);
+export const catOf = (s: { categories?: Category[] }, key?: string): Category =>
+  categoriesOf(s).find((c) => c.key === key) || DEFAULT_CATEGORIES.find((c) => c.key === key) || { key: key || "other", label: "Other", color: "#8a8c9e", emoji: "•" };
+export const catLabel = (s: { categories?: Category[] }, key?: string) => catOf(s, key).label;
 
 export const ENERGY_LABEL: Record<Energy, string> = { low: "Low", med: "Medium", high: "High" };
 

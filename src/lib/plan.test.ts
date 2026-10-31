@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cuesFor, everyLabel, freeDue, isVirtual, materialize, notesFor, notesToReview, tasksFor, unplacedFor } from "./plan";
+import { cuesFor, everyLabel, freeDue, isVirtual, materialize, needsLog, notesFor, notesToReview, shownDur, tasksFor, unplacedFor } from "./plan";
 import { routine, state, task, TODAY } from "../test/fixtures";
 
 describe("tasksFor: routines appear every week without being re-planned", () => {
@@ -104,5 +104,22 @@ describe("to-dos never roll over by themselves", () => {
   });
   it("old unfinished ones wait for a review", () => {
     expect(notesToReview(s, TODAY).map((n) => n.id)).toEqual(["old"]);
+  });
+});
+
+describe("ongoing blocks (no finish time)", () => {
+  const t = task({ id: "o", start: "14:00", dur: 30, ongoing: true });
+  it("grow with the clock today and never count as 'ended without a log'", () => {
+    expect(shownDur(t, true, 16 * 60)).toBe(120);
+    expect(shownDur(t, true, 14 * 60 + 5)).toBe(15);
+    expect(needsLog(t, TODAY, TODAY, 18 * 60)).toBe(false);
+  });
+  it("get a 'starts soon' nudge but no halfway or end prompts", () => {
+    const kinds = cuesFor(state({ tasks: [t] }), TODAY).filter((c) => c.taskId === "o").map((c) => c.kind);
+    expect(kinds).toEqual(["transition"]);
+  });
+  it("routines can be ongoing too", () => {
+    const s = state({ routines: [routine({ ongoing: true, emoji: "🧹" })] });
+    expect(tasksFor(s, TODAY)[0]).toMatchObject({ ongoing: true, emoji: "🧹" });
   });
 });

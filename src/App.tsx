@@ -12,6 +12,8 @@ import { WorkView } from "./components/WorkView";
 import { PageSheet, ProjectSheet } from "./components/WorkSheets";
 import { WydSheet } from "./components/WydSheet";
 import { ReviewSheet } from "./components/ReviewSheet";
+import { CategorySheet } from "./components/CategorySheet";
+import { categoriesOf } from "./constants";
 import { EntrySheet } from "./components/EntrySheet";
 import { PlaybookView } from "./components/PlaybookView";
 import { PatternsView } from "./components/PatternsView";
@@ -213,6 +215,14 @@ export default function App() {
   const ctx = useMemo(() => ({ state, update, date, setDate, setTab, open: setSheet, close, back, canBack: stack.length > 0, toast, now, celebrate }),
     [state, update, date, setTab, setSheet, close, back, stack.length, toast, now, celebrate]);
 
+  // every category's colour as a CSS variable (--c-<key>); dark mode gets a lighter mix
+  const catCss = useMemo(() => {
+    const cats = categoriesOf(state);
+    const light = cats.map((c) => `--c-${c.key}:${c.color};`).join("");
+    const dark = cats.map((c) => `--c-${c.key}:color-mix(in srgb, ${c.color} 55%, #ffffff);`).join("");
+    return `:root{${light}}@media (prefers-color-scheme: dark){:root{${dark}}}`;
+  }, [state.categories]);
+
   const group = groupOf(tab);
   const isToday = date === today();
   const dayLabel = parseKey(date).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
@@ -232,6 +242,7 @@ export default function App() {
 
   return (
     <Ctx.Provider value={ctx}>
+      <style>{catCss}</style>
       <div className="wrap">
         <header className="top">
           <div className="headtext">
@@ -282,6 +293,7 @@ export default function App() {
       {sheet?.type === "free" && <FreeSheet key={sheet.item?.id || "new"} item={sheet.item} />}
       {sheet?.type === "freedue" && <FreeDueSheet id={sheet.id} />}
       {sheet?.type === "review" && <ReviewSheet />}
+      {sheet?.type === "categories" && <CategorySheet />}
       {sheet?.type === "wyd" && <WydSheet key={`${sheet.date}${sheet.at}${sheet.from}`} date={sheet.date} at={sheet.at} from={sheet.from} promptKey={sheet.promptKey} />}
       {sheet?.type === "project" && <ProjectSheet key={sheet.project?.id || "new"} project={sheet.project} />}
       {sheet?.type === "page" && <PageSheet key={sheet.page?.id || `new${sheet.kind}`} page={sheet.page} projectId={sheet.projectId} kind={sheet.kind} />}

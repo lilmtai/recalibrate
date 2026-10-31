@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useApp } from "../ctx";
-import { CATEGORIES } from "../constants";
+import { categoriesOf } from "../constants";
 import type { CategoryKey, FreeItem } from "../types";
 import { addDays, longDate, today, uid } from "../lib/time";
 import { everyLabel } from "../lib/plan";
@@ -14,7 +14,7 @@ const EVERY: { key: number; label: string }[] = [
 
 /** Add or edit a free block: no set time, comes back every N days, reminds you when due. */
 export function FreeSheet({ item }: { item?: FreeItem }) {
-  const { update, close, toast } = useApp();
+  const { state, update, close, toast } = useApp();
   const preset = item ? (EVERY.some((e) => e.key === item.everyDays) ? item.everyDays : -1) : 14;
   const [title, setTitle] = useState(item?.title || "");
   const [category, setCategory] = useState<CategoryKey>(item?.category || "me");
@@ -61,7 +61,7 @@ export function FreeSheet({ item }: { item?: FreeItem }) {
           <input id="f-at" type="time" value={remindAt} onChange={(e) => setRemindAt(e.target.value)} /></div>
       </div>
       <div className="field"><span>Area</span>
-        <Chips options={CATEGORIES.map((c) => ({ key: c.key, label: c.label, color: `var(--c-${c.key})` }))} value={category} onChange={setCategory} /></div>
+        <Chips options={categoriesOf(state).map((c) => ({ key: c.key, label: `${c.emoji} ${c.label}`, color: `var(--c-${c.key})` }))} value={category} onChange={setCategory} /></div>
       {error && <div className="error" role="alert">{error}</div>}
       <div className="actions">
         {item && <button className="btn ghost" onClick={remove}>Delete</button>}

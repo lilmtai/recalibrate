@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useApp } from "../ctx";
-import { CATEGORIES } from "../constants";
+import { categoriesOf } from "../constants";
 import type { CategoryKey, Page, Project } from "../types";
 import { today, uid } from "../lib/time";
 import { nowIso } from "../lib/work";
@@ -8,7 +8,7 @@ import { Chips, Sheet } from "./Sheet";
 
 /** New or edit project: name, area, why it matters, and (new only) the first step. */
 export function ProjectSheet({ project }: { project?: Project }) {
-  const { update, close, toast } = useApp();
+  const { state, update, close, toast } = useApp();
   const [name, setName] = useState(project?.name || "");
   const [area, setArea] = useState<CategoryKey>(project?.area || "side");
   const [why, setWhy] = useState(project?.why || "");
@@ -38,7 +38,7 @@ export function ProjectSheet({ project }: { project?: Project }) {
       <div className="field"><label htmlFor="p-name">Name</label><input id="p-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Launch the newsletter" autoFocus={!project} /></div>
       <div className="field"><label htmlFor="p-why">Why it matters <span className="opt">optional</span></label><input id="p-why" value={why} onChange={(e) => setWhy(e.target.value)} placeholder="Build an audience before the product" /></div>
       {!project && <div className="field"><label htmlFor="p-first">Very next step <span className="opt">optional</span></label><input id="p-first" value={first} onChange={(e) => setFirst(e.target.value)} placeholder="Write 5 headline ideas" /></div>}
-      <div className="field"><span>Area</span><Chips options={CATEGORIES.map((c) => ({ key: c.key, label: c.label, color: `var(--c-${c.key})` }))} value={area} onChange={setArea} /></div>
+      <div className="field"><span>Area</span><Chips options={categoriesOf(state).map((c) => ({ key: c.key, label: `${c.emoji} ${c.label}`, color: `var(--c-${c.key})` }))} value={area} onChange={setArea} /></div>
       {error && <div className="error" role="alert">{error}</div>}
       <div className="actions">
         {project && (confirm

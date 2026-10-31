@@ -56,14 +56,22 @@ Rules for every agent (Claude Code, Codex):
   `PatternsView`, `PlaybookView`, `MeView` (routines, day hours, account, phone app, example data), and the sheets
   (`BlockSheet`, `LogSheet`, `WhySheet` (one-tap reason), `MissSheet`/`CheckSheet`, `AskSheet`, `FreeSheet`/`FreeDueSheet`,
   `EntrySheet`, `QuickSheet`, `WelcomeSheet`, `SetupSheet` (+ `lib/pushCheck.ts` "Check notifications"), `AccountSheet`).
+- Today has a week strip and two views: **List** (default; emoji pill per block, height by length, one-tap ✓ circle,
+  free time between blocks; `components/DayList.tsx`) and **Grid** (hour grid; used by Reorganize and tray placing).
+- Ongoing blocks (`Task.ongoing`, no finish time): drawn growing with the clock (`shownDur`), no halfway/end prompts,
+  ✓ (`completeTask`) records the real length.
 - Routine instances: editing asks "This day only" vs "Every week"; moving one in Reorganize offers "Every week" in a toast.
 - `supabase/schema.sql`, `supabase/push.sql`, `supabase/functions/send-push/index.ts`: server side (run/deployed by the owner in the dashboard).
 
 ## Design rules
 - Champagne palette: ivory `#fbf8f2`, navy `#18224a` (ink + primary), champagne gold `#c9a45c` for special moments.
   Dark mode: navy ground, gold primary. Orange (`--warn`) only means "needs attention".
-- Areas: work `#2c49a6`, health `#2f8466`, social `#b84d72`, side hustle `#6e52a3`, me time `#2c8799`.
-- Fonts: DM Serif Display (headings) + Plus Jakarta Sans. Icons: inline SVG in `components/Icon.tsx`, never emoji.
+- Categories are data (`state.categories`, defaults in `constants.ts → DEFAULT_CATEGORIES`: work, side hustle, health,
+  social, me time, cooking, cleaning, errands, learning, admin, family, rest). Users add / rename / recolour / remove them
+  (`CategorySheet`). Colours become CSS variables `--c-<key>` injected by `App`; use `categoriesOf` / `catOf` / `catLabel`.
+- Fonts: DM Serif Display (headings) + Plus Jakarta Sans. UI icons: inline SVG in `components/Icon.tsx`.
+  **Emoji are used only as block / category icons** (owner's request): `lib/emoji.ts → suggestEmoji` picks one from the
+  title, users can override (`Task.emoji`, `Routine.emoji`).
 - Low friction above all: one tap where possible, no judgement in copy, "if not" fallbacks, celebrate wins (gold check + vibration).
 - Phone first: bottom tab bar, + button, test at 390px wide and in dark mode.
 

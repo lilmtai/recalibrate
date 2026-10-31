@@ -105,6 +105,10 @@ Rules for all AI work: `AI_BEHAVIOUR.md`.
 
 | Feature | Where |
 | --- | --- |
+| Your own categories (12 defaults incl. cooking, cleaning, errands…), each with colour + emoji | `CategorySheet`, `state.categories` |
+| Emoji on every block, suggested from the title | `lib/emoji.ts` |
+| Ongoing blocks (no finish time) that run until ✓ | `Task.ongoing`, `completeTask` |
+| List view with one-tap ✓ and a week strip (Grid view kept for reorganizing) | `DayList.tsx` |
 | Work tab: projects, one next step each, steps, journal, drafts, goals, quick capture | `WorkView`, `WorkSheets`, `lib/work.ts` |
 | Playbook: turn a miss into an if-then fix with a reminder, scored over time | `MissSheet`, `PlaybookView` |
 | "If not" fallback version for every block | `Task.ifNot`, `Routine.ifNot` |

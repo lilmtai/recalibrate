@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useRef, useState, type CSSProperties, type Mouse
 import { useApp } from "../ctx";
 import type { Cue, Task } from "../types";
 import { fmt, toMin } from "../lib/time";
-import { materialize } from "../lib/plan";
+import { materialize, shownDur } from "../lib/plan";
 
 export const HOUR = 56;
 export const SNAP = 15;
@@ -48,7 +48,7 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ ta
     const s = toMin(t.start);
     let i = lanes.findIndex((e) => e <= s);
     if (i < 0) { i = lanes.length; lanes.push(0); }
-    lanes[i] = s + t.dur;
+    lanes[i] = s + shownDur(t, isToday, now);
     lane[t.id] = i;
   }
   const L = Math.max(1, lanes.length);
@@ -117,7 +117,7 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline({ ta
         {tasks.map((t) => {
           const live = drag?.id === t.id ? drag : null;
           const s = live ? live.start : toMin(t.start);
-          const dur = live ? live.dur : t.dur;
+          const dur = live ? live.dur : shownDur(t, isToday, now);
           const h = Math.max(24, (dur / 60) * HOUR - 3);
           const dim = lowDay && t.energy === "high" && t.status === "open";
           const sub =

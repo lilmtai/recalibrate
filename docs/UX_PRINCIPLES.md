@@ -29,7 +29,9 @@
 ## Visual system
 - Champagne palette: ivory `#fbf8f2`, navy `#18224a`, champagne gold `#c9a45c`; dark mode navy + gold.
 - Areas: work `#2c49a6`, health `#2f8466`, social `#b84d72`, side hustle `#6e52a3`, me time `#2c8799`.
-- Fonts: DM Serif Display (headings), Plus Jakarta Sans (everything else). Inline SVG icons, no emoji.
+- Fonts: DM Serif Display (headings), Plus Jakarta Sans (everything else). Inline SVG UI icons; emoji only as
+  block / category icons (suggested from the title, user can change).
+- Today: week strip on top, List view by default (emoji pill, times, one-tap ✓), Grid for reorganizing.
 - Motion: short (≤ 280 ms), respects reduced-motion.
 
 ## Notifications

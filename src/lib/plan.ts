@@ -19,6 +19,8 @@ export function tasksFor(s: State, date: string): Task[] {
       category: r.category,
       energy: r.energy,
       ifNot: r.ifNot,
+      emoji: r.emoji,
+      ongoing: r.ongoing,
       status: "open",
       routineId: r.id,
       ex: r.ex,
@@ -45,7 +47,14 @@ export const notesToReview = (s: State, date: string): Note[] =>
 
 /** A block that ended (or a past day's block) with nothing logged. */
 export const needsLog = (t: Task, date: string, today: string, now: number) =>
-  t.status === "open" && (date < today || (date === today && toMin(t.start) + t.dur <= now));
+  t.status === "open" && !(t.ongoing && date === today) && (date < today || (date === today && toMin(t.start) + t.dur <= now));
+
+/** How long to draw a block: an ongoing one today grows with the clock (at least 15 min). */
+export function shownDur(t: Task, isToday: boolean, now: number): number {
+  if (!t.ongoing || t.status !== "open") return t.dur;
+  if (!isToday) return t.dur;
+  return Math.max(15, now - toMin(t.start));
+}
 
 /** Turn a routine instance into a stored task so it can be logged or edited. Mutates the draft. */
 export function materialize(s: State, t: Task): Task {
@@ -82,6 +91,7 @@ export function cuesFor(s: State, date: string): Cue[] {
   for (const t of tasksFor(s, date).filter((t) => t.status === "open" && t.id !== f?.taskId)) {
     const st = toMin(t.start);
     out.push({ key: `${t.id}:start`, at: st - 5, text: `${t.title} starts at ${t.start}`, forTask: t.title, tomorrow: false, kind: "transition", taskId: t.id });
+    if (t.ongoing) continue; // no set end: no halfway / end prompts
     if (t.dur >= 30 && !(t.checks || []).length)
       out.push({ key: `${t.id}:mid`, at: st + Math.round(t.dur / 2), text: `Halfway through ${t.title}. Still on it?`, forTask: t.title, tomorrow: false, kind: "mid", taskId: t.id });
     out.push({ key: `${t.id}:end`, at: st + t.dur, text: `${t.title} just ended. Log what happened.`, forTask: t.title, tomorrow: false, kind: "end", taskId: t.id });

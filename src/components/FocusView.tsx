@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useApp } from "../ctx";
-import { CAT_LABEL } from "../constants";
+import { catLabel } from "../constants";
 import { toMin, today, uid } from "../lib/time";
 import { tasksFor } from "../lib/plan";
 import { cancelFocus, elapsedMin, endFocus, extendFocus, keepGoing, pauseFocus, remainingMs, resumeFocus } from "../lib/focus";
 import { Icon } from "./Icon";
+import { suggestEmoji } from "../lib/emoji";
 
 const clock = (ms: number) => {
   const t = Math.max(0, Math.round(Math.abs(ms) / 1000));
@@ -66,10 +67,11 @@ export function FocusView({ onMinimize }: { onMinimize: () => void }) {
     <div className="focus-screen" role="dialog" aria-modal="true" aria-label={`Focus: ${task.title}`} style={{ "--c": `var(--c-${task.category})` } as CSSProperties}>
       <div className="focus-inner">
         <div className="focus-top">
-          <span className="chip"><span className="swatch" />{CAT_LABEL[task.category]}</span>
+          <span className="chip"><span className="swatch" />{catLabel(state, task.category)}</span>
           <button className="roundbtn" aria-label="Minimize focus" onClick={onMinimize}><Icon name="back" size={18} /></button>
         </div>
 
+        <div className="focus-emoji" aria-hidden="true">{task.emoji || suggestEmoji(task.title, task.category, state)}</div>
         <h1 className="focus-title">{task.title}</h1>
         {f.mode === "five" && !over && <div className="focus-sub">Just 5 minutes. That's all you promised.</div>}
         {task.ifNot && f.mode === "block" && !over && <div className="focus-sub">Too much? The “if not” version counts: {task.ifNot}</div>}

@@ -1,6 +1,7 @@
 import { useApp } from "../ctx";
 import type { SyncStatus } from "../sync";
 import { loadExample } from "../example";
+import { categoriesOf } from "../constants";
 import { dropActuals } from "../lib/actuals";
 import { STATUS_LABEL } from "./AccountSheet";
 import type { HistoryMode } from "../useHistory";
@@ -34,6 +35,12 @@ export function MeView({ sync, pushOn, installed, historyMode }: { sync: { email
       <section>
         <RoutinesView />
       </section>
+
+      <div className="card mecard">
+        <span className="ic"><Icon name="sparkle" /></span>
+        <div className="grow"><b>Categories</b><span className="small muted">{categoriesOf(state).map((c) => c.emoji).join(" ")}</span></div>
+        <button className="btn" onClick={() => open({ type: "categories" })}>Edit</button>
+      </div>
 
       <div className="card mecard">
         <span className="ic"><Icon name="moon" /></span>

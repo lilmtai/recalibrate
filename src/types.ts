@@ -1,5 +1,14 @@
 export type Energy = "low" | "med" | "high";
-export type CategoryKey = "work" | "health" | "social" | "side" | "me";
+/** A category key: a built-in one ("work", "cooking"…) or one you created ("c_ab12cd"). */
+export type CategoryKey = string;
+
+/** A category (area of life) with its colour and emoji. Yours to rename, recolour, add or remove. */
+export interface Category {
+  key: CategoryKey;
+  label: string;
+  color: string; // hex
+  emoji: string;
+}
 export type BarrierKey =
   | "energy" | "bloated" | "overwhelm" | "time" | "forgot" | "avoid" | "sleep" | "cameup"
   | "distracted" | "hardstart" | "longer" | "other";
@@ -48,6 +57,10 @@ export interface Task {
   /** when you really started / finished (ISO), recorded by Start, "I'm on it", WYD, or logging it done */
   startedAt?: string;
   endedAt?: string;
+  /** emoji shown next to the block (suggested from the title, or picked) */
+  emoji?: string;
+  /** no finish time: runs until you mark it finished; `dur` is a placeholder until then */
+  ongoing?: boolean;
   /** minutes added with "+10 / +30" when time ran out */
   extendedMin?: number;
   /** in the reorganize tray, not on the timeline */
@@ -70,6 +83,8 @@ export interface Routine {
   ifNot?: string;
   days: number[];
   since: string;
+  emoji?: string;
+  ongoing?: boolean;
   ex?: boolean;
 }
 
@@ -212,6 +227,8 @@ export interface State {
   steps: Step[];
   pages: Page[];
   notify?: NotifyPrefs;
+  /** your categories; when missing, the defaults are used */
+  categories?: Category[];
   /** the block you're focusing on right now (one at a time) */
   focus?: Focus;
   /** usual waking hours; the timeline folds away the rest */
