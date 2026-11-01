@@ -1,5 +1,5 @@
 /* Recalibrate service worker: offline app shell + push notifications. */
-const CACHE = "recalibrate-v6";
+const CACHE = "recalibrate-v7";
 // answers given straight from a notification, applied by the app when it next runs
 const PENDING = "recalibrate-pending";
 
@@ -20,7 +20,8 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET" || url.origin !== self.location.origin) return;
   if (req.mode === "navigate") {
     event.respondWith(
-      fetch(req)
+      // skip the browser's HTTP cache so a new version shows on the next open
+      fetch(req, { cache: "no-cache" })
         .then((res) => {
           if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put("./", copy)); }
           return res;
