@@ -55,7 +55,7 @@
 html, body { margin: 0; background: var(--bg); color: var(--fg); }
 /* feel like a native app: no zoom, no sideways drift, no grey tap flash */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; overscroll-behavior: none; }
-body { overflow-x: hidden; overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+body { overflow-x: clip; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 #root { overflow-x: clip; }
 html, body, button, a, input, select, textarea, label, [role="button"] { touch-action: manipulation; }
 img, svg, video, canvas { max-width: 100%; }
