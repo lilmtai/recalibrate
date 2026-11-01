@@ -40,7 +40,7 @@ reality, learns why it exists, and helps you shrink it.
 - **Hourly "What are you doing?" (WYD)** is the main way real days get logged.
 - **Logging a reason is optional and one tap.** Details come after, never required.
 - **Work tab** for projects, next steps, journal, drafts and goals is part of the product.
-- **Look:** Champagne palette (ivory, navy, champagne gold), calm and premium; see `UX_PRINCIPLES.md`.
+- **Look:** simple and calm: neutral greys, black / white, one blue accent; see `UX_PRINCIPLES.md`.
 
 ## How we know it works
 See `ROADMAP.md` → Success metrics. The headline metric:
