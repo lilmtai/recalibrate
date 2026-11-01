@@ -21,8 +21,9 @@
   --tint: 12%;
   color-scheme: light;
 }
+/* dark: follows the phone unless you pick Light or Dark in Me → Appearance (data-theme on <html>) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0b0b0c; --surface: #161618; --sunk: #1d1d20; --line: #2a2a2e;
     --fg: #f2f2f3; --muted: #a1a1a9; --faint: #6f6f78;
     --accent: #f2f2f3; --accent-soft: #232327; --accent-fg: #0b0b0c; --accent-text: #f2f2f3;
@@ -35,6 +36,19 @@
     --tint: 16%;
     color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #0b0b0c; --surface: #161618; --sunk: #1d1d20; --line: #2a2a2e;
+  --fg: #f2f2f3; --muted: #a1a1a9; --faint: #6f6f78;
+  --accent: #f2f2f3; --accent-soft: #232327; --accent-fg: #0b0b0c; --accent-text: #f2f2f3;
+  --gold: #5b8cff; --gold-soft: #1a2238; --gold-text: #8fb0ff;
+  --warn: #f0a86a; --warn-soft: #30231a; --good: #6fcf9f; --good-soft: #15291f; --error: #f2958a;
+  --note: #161618; --note-line: #2a2a2e;
+  --c-work: #93a8f0; --c-health: #7cc8a6; --c-social: #ec9fbb; --c-side: #bca6ea; --c-me: #7fcbdb;
+  --shadow: 0 1px 2px rgb(0 0 0 / .3);
+  --shadow-lift: 0 12px 30px rgb(0 0 0 / .5);
+  --tint: 16%;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }

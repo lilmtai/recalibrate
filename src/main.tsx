@@ -3,8 +3,10 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import { lockZoom } from "./lib/zoom";
+import { applyTheme, getTheme } from "./lib/theme";
 
 lockZoom();
+applyTheme(getTheme());
 // the old List / Grid setting is gone (one day view now)
 try { localStorage.removeItem("recalibrate.dayview"); } catch { /* ignore */ }
 

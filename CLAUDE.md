@@ -80,7 +80,9 @@ Rules for every agent (Claude Code, Codex):
 ## Design rules
 - Simple neutral palette (owner, Nov 2026: "something simple"; replaced the champagne/navy/gold one): light = soft grey
   `#f6f6f7` ground, white cards, near-black ink + buttons `#111114`; dark = `#0b0b0c` ground, `#161618` cards, white
-  buttons. One blue (`--gold` token, name kept) marks now / focus / wins. Orange (`--warn`) only means "needs attention".
+  buttons. One blue (`--gold` token, name kept) marks now / focus / wins.
+  Me → Appearance: Auto / Light / Dark per device (`lib/theme.ts`, `data-theme` on <html>, localStorage `recalibrate.theme`);
+  dark tokens live twice in `index.css` (prefers-dark unless `data-theme="light"`, and `data-theme="dark"`), same for category colours in `App`. Orange (`--warn`) only means "needs attention".
 - Categories are data (`state.categories`, defaults in `constants.ts → DEFAULT_CATEGORIES`: work, side hustle, health,
   social, me time, cooking, cleaning, errands, learning, admin, family, rest). Users add / rename / recolour / remove them
   (`CategorySheet`). Colours become CSS variables `--c-<key>` injected by `App`; use `categoriesOf` / `catOf` / `catLabel`.

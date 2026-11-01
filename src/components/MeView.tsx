@@ -7,11 +7,15 @@ import { STATUS_LABEL } from "./AccountSheet";
 import type { HistoryMode } from "../useHistory";
 import { RoutinesView } from "./RoutinesView";
 import { Icon } from "./Icon";
+import { useState } from "react";
+import { getTheme, setTheme, type Theme } from "../lib/theme";
 
 /** Me: routines, your day hours, account and sync, phone app and notifications, example data. */
 export function MeView({ sync, pushOn, installed, historyMode }: { sync: { email: string | null; status: SyncStatus }; pushOn: boolean; installed: boolean; historyMode: HistoryMode }) {
   const { state, update, open, toast } = useApp();
   const hours = state.dayHours || { start: "07:00", end: "23:00" };
+  const [theme, setThemeState] = useState<Theme>(getTheme);
+  const pickTheme = (t: Theme) => { setTheme(t); setThemeState(t); };
   const hasEx = state.tasks.some((t) => t.ex) || state.routines.some((r) => r.ex) || state.notes.some((n) => n.ex) || state.projects.some((p) => p.ex);
 
   const clearExamples = () => {
@@ -35,6 +39,18 @@ export function MeView({ sync, pushOn, installed, historyMode }: { sync: { email
       <section>
         <RoutinesView />
       </section>
+
+      <div className="card mecard">
+        <span className="ic"><Icon name="sun" /></span>
+        <div className="grow"><b>Appearance</b><span className="small muted">{theme === "auto" ? "Follows your phone’s light / dark setting." : `Always ${theme} on this device.`}</span></div>
+        <div style={{ flex: "1 1 100%", paddingLeft: 58 }}>
+          <div className="seg" role="group" aria-label="Appearance">
+            {(["auto", "light", "dark"] as const).map((t) => (
+              <button key={t} aria-pressed={theme === t} onClick={() => pickTheme(t)}>{t === "auto" ? "Auto" : t === "light" ? "Light" : "Dark"}</button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       <div className="card mecard">
         <span className="ic"><Icon name="sparkle" /></span>

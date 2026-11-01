@@ -221,7 +221,7 @@ export default function App() {
     const cats = categoriesOf(state);
     const light = cats.map((c) => `--c-${c.key}:${c.color};`).join("");
     const dark = cats.map((c) => `--c-${c.key}:color-mix(in srgb, ${c.color} 55%, #ffffff);`).join("");
-    return `:root{${light}}@media (prefers-color-scheme: dark){:root{${dark}}}`;
+    return `:root{${light}}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){${dark}}}:root[data-theme="dark"]{${dark}}`;
   }, [state.categories]);
 
   const group = groupOf(tab);
