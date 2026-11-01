@@ -8,7 +8,8 @@ import { materialize } from "./plan";
 import { moveTask } from "./actions";
 import { addDays, fmt, toMin } from "./time";
 
-export type RecoveryMode = "fix" | "minimum";
+/** fix / minimum: re-plan the day; shorten / postpone: the overload fixes (P-4) */
+export type RecoveryMode = "fix" | "minimum" | "shorten" | "postpone";
 
 export type ChangeKind =
   | "move" // new time today
@@ -35,6 +36,8 @@ export interface Proposal {
   fixedKept: number;
   /** flexible blocks that stay where they are */
   unchanged: number;
+  /** overload fixes: minutes still over after the proposal (0 = it fits) */
+  over?: number;
 }
 
 export interface RecoveryInput {
@@ -267,4 +270,105 @@ export function recoveryTrigger(tasks: Task[], now: number, opts: { lowEnergy?: 
   if (unlogged.length >= 2) return `${unlogged.length} blocks slipped by.`;
   if (opts.lowEnergy && open.some((t) => toMin(t.start) >= now && (t.energy === "high" || t.difficulty === "hard"))) return "Low energy today.";
   return null;
+}
+
+/* ---------------- Capacity and overload (P-3, P-4) ---------------- */
+
+/** share of the (remaining) day window kept free as buffer */
+export const BUFFER_SHARE = 0.15;
+
+export interface Capacity {
+  /** minutes left in your day hours (all of them for a day that hasn't started) */
+  window: number;
+  /** fixed appointments inside that window */
+  fixed: number;
+  /** window − fixed */
+  available: number;
+  /** flexible blocks still to do (running ones: the part that's left) */
+  planned: number;
+  /** planned × your time multiplier (how long things really take you), when it's above 1 */
+  realistic: number;
+  /** protected slack: 15% of the window + 10 min after long demanding blocks */
+  buffer: number;
+  /** available − buffer − planned (negative = over) */
+  free: number;
+  /** minutes over: planned − (available − buffer), at least 0 */
+  over: number;
+}
+
+/**
+ * How full the rest of the day is (SCHEDULING_RULES → Capacity). Pure: counts open blocks only;
+ * a block whose time passed without being done still counts, because it still needs doing.
+ */
+export function capacity(input: { tasks: Task[]; now: number; dayHours: { start: string; end: string }; runningId?: string; multiplier?: number | null }): Capacity {
+  const ws = toMin(input.dayHours.start);
+  const we = Math.max(ws, toMin(input.dayHours.end));
+  const from = input.now < 0 ? ws : Math.min(we, Math.max(ws, input.now));
+  const window = we - from;
+  let fixed = 0;
+  let planned = 0;
+  let extra = 0;
+  for (const t of input.tasks) {
+    if (!isOpen(t) || t.unplaced) continue;
+    const s = toMin(t.start);
+    const e = s + t.dur;
+    if (t.fixed) { fixed += Math.max(0, Math.min(e, we) - Math.max(s, from)); continue; }
+    planned += isRunning(t, input.now, input.runningId) ? Math.max(0, e - Math.max(from, s)) : t.dur;
+    if (needsBuffer(t, t.dur)) extra += BUFFER_AFTER;
+  }
+  const available = Math.max(0, window - fixed);
+  const buffer = Math.min(available, window > 0 ? Math.round(window * BUFFER_SHARE) + extra : 0);
+  const m = input.multiplier && input.multiplier > 1 ? input.multiplier : 1;
+  const realistic = Math.round(planned * m);
+  return { window, fixed, available, planned, realistic, buffer, free: available - buffer - planned, over: Math.max(0, planned - (available - buffer)) };
+}
+
+/** least important first: low priority, no / later deadline, latest start */
+const leastFirst = (a: Task, b: Task) =>
+  prio(b) - prio(a)
+  || (b.deadline || "9999").localeCompare(a.deadline || "9999")
+  || toMin(b.start) - toMin(a.start)
+  || a.id.localeCompare(b.id);
+
+/**
+ * Overload fixes (P-4): just enough changes to bring the day back under capacity, least important first.
+ * "shorten" = minimum versions (blocks with a minimum set); "postpone" = to another day's free slot
+ * (routines: skip today; no slot: tray). Never touches fixed, running, essential or "has to happen
+ * today" blocks, or anything due today. A proposal only: nothing changes without approval.
+ */
+export function proposeLighten(input: RecoveryInput & { multiplier?: number | null }, kind: "shorten" | "postpone"): Proposal {
+  const cap = capacity(input);
+  let over = cap.over;
+  const changes: Change[] = [];
+  const movable = input.tasks.filter((t) =>
+    isOpen(t) && !t.unplaced && !t.fixed && !isRunning(t, input.now, input.runningId));
+  const fixedKept = input.tasks.filter((t) => isOpen(t) && t.fixed).length;
+  const fromOf = (t: Task) => ({ start: t.start, dur: t.dur });
+
+  if (kind === "shorten") {
+    for (const t of movable.filter((x) => x.minDur && x.minDur < x.dur).sort(leastFirst)) {
+      if (over <= 0) break;
+      const save = t.dur - t.minDur!;
+      changes.push({ id: t.id, title: t.title, kind: "shorten", from: fromOf(t), to: { start: t.start, dur: t.minDur! }, reason: `Shorter version: frees ${save} min.` });
+      over -= save;
+    }
+  } else {
+    const ok = (t: Task) => !t.noPostpone && !t.essential && !(t.deadline && t.deadline <= input.date) && t.priority !== "high";
+    for (const t of movable.filter(ok).sort(leastFirst)) {
+      if (over <= 0) break;
+      if (t.routineId) {
+        changes.push({ id: t.id, title: t.title, kind: "skip", from: fromOf(t), reason: `Skipped for today, frees ${t.dur} min. The routine stays.` });
+      } else {
+        const slot = laterSlot(input, t, t.dur);
+        if (slot) {
+          const day = slot.date === addDays(input.date, 1) ? "tomorrow" : "a later day";
+          changes.push({ id: t.id, title: t.title, kind: "postpone", from: fromOf(t), to: { start: fmt(slot.start), dur: t.dur, date: slot.date }, reason: `Moves to ${day}, frees ${t.dur} min.` });
+        } else {
+          changes.push({ id: t.id, title: t.title, kind: "tray", from: fromOf(t), reason: `No free slot this week: parked in the tray, frees ${t.dur} min.` });
+        }
+      }
+      over -= t.dur;
+    }
+  }
+  return { date: input.date, mode: kind, changes, fixedKept, unchanged: 0, over: Math.max(0, over) };
 }

@@ -14,7 +14,8 @@ export type SheetState =
   | { type: "freedue"; id: string }
   | { type: "wyd"; date: string; at?: number; from?: number; promptKey?: string }
   | { type: "review" }
-  | { type: "recover"; date: string; mode?: "fix" | "minimum" }
+  | { type: "recover"; date: string; mode?: "fix" | "minimum" | "shorten" | "postpone" }
+  | { type: "capacity"; date: string }
   | { type: "categories" }
   | { type: "project"; project?: Project }
   | { type: "page"; page?: Page; projectId: string; kind: Page["kind"] }

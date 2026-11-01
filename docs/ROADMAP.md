@@ -28,7 +28,7 @@ and acceptance criteria (AC). An item is done when every AC is met, tests pass, 
   and keeps only the last 30 days locally.
 - AC: answering the same WYD on two devices produces one entry.
 
-## Sprint 1 · Planning foundation (P0) · P-1, P-2 done; P-5 partly (inside "Fix my day"); P-3, P-4, P-6 open
+## Sprint 1 · Planning foundation (P0) · P-1…P-4 done; P-5 partly (inside "Fix my day"); P-6 open
 
 **P-1 · Block kinds: fixed / flexible / floating** (DP-1, DP-5)
 - AC: new-block form has Fixed / Flexible; floating = to-dos and free blocks.

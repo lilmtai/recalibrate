@@ -15,9 +15,9 @@ Backlog items in `ROADMAP.md` reference these IDs.
 | DP-5 | Fixed appointments preserved | Done | The engine never moves fixed blocks; Reorganize asks before moving one. |
 | DP-6 | Recurring tasks never silently disappear | Done | Routines are generated per day (`tasksFor`); edits ask "this day / every week". |
 | DP-7 | No automatic overflow of unfinished work into tomorrow | Done | Nothing rolls over. Old unfinished to-dos wait in "N unfinished from before · Review" (`ReviewSheet`): today / pick a day / drop. |
-| DP-8 | Daily capacity limited by realistic available time | Missing | Day hours exist (`dayHours`), not used for capacity. |
-| DP-9 | Capacity indicator: available / planned / buffer / unallocated | Missing | |
-| DP-10 | Overload warning when planned > available | Missing | |
+| DP-8 | Daily capacity limited by realistic available time | Done | `capacity()` in `lib/schedule.ts`: day hours minus time passed minus fixed appointments; "realistic" uses your time multiplier. |
+| DP-9 | Capacity indicator: available / planned / buffer / unallocated | Done | Slim bar under the day header ("2h free · 5h planned"); tap for the breakdown (`CapacitySheet`). |
+| DP-10 | Overload warning when planned > available | Done | "More than fits · 1h 30m over" notice (closable) → "Make it fit": Shorten / Postpone / Rearrange proposals (`proposeLighten`), approve or untick. |
 | DP-11 | Finish can't be before start | Done | `BlockSheet`. |
 
 ## Module 2 · Time awareness (P0)
@@ -90,7 +90,7 @@ Backlog items in `ROADMAP.md` reference these IDs.
 
 | ID | Capability | Status |
 | --- | --- | --- |
-| AI-1 | Schedule analysis / overload warnings | Missing (deterministic version comes first: DP-9, DP-10) |
+| AI-1 | Schedule analysis / overload warnings | Missing (deterministic version done: DP-9, DP-10) |
 | AI-2 | Day recovery proposals | Missing (needs RE-1 engine) |
 | AI-3 | Task decomposition | Missing |
 | AI-4 | Duration estimation | Partial (deterministic multiplier exists) |

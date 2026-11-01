@@ -32,7 +32,9 @@ Rules for every agent (Claude Code, Codex):
   `PlanFields` (fixed, priority, deadline, difficulty, minDur, noPostpone, essential, desc) on blocks and routines, set in
   `BlockSheet` (Flexible / Fixed up top, the rest behind "More"). `Task.moves` = schedule history (`moveTask` in `lib/actions.ts`).
 - `src/lib/schedule.ts`: the deterministic engine (tested): `proposeRecovery` ("Fix my day" / "Minimum day"),
-  `applyRecovery`, `recoveryTrigger` (when Today offers it), `earliestFit`. UI: `components/RecoverSheet.tsx`
+  `applyRecovery`, `recoveryTrigger` (when Today offers it), `earliestFit`, `capacity` (how full the day is) and
+  `proposeLighten` (overload fixes: shorten / postpone). Capacity UI: `CapacityLine` under the day header in `DayView`,
+  `CapacitySheet` (in `RecoverSheet.tsx`); "More than fits" notice → RecoverSheet in shorten mode (Shorten / Postpone / Rearrange). UI: `components/RecoverSheet.tsx`
   (before → after, reasons, untick, Approve / Dismiss), "Fix my day" button + "Day slipping?" banner in `DayView`.
 - `src/store.ts`: load/save/migrate state; `update(fn)` edits a structuredClone draft and stamps `updatedAt`.
 - `src/sync.ts`: Supabase auth (password, email code, link) + sync of one `planner_state` row per user; merges on conflict.
@@ -58,7 +60,7 @@ Rules for every agent (Claude Code, Codex):
   remind at `remindAt` daily while due/overdue (`cuesFor` kind `free`), Done moves `nextDue` forward (`lib/actions.ts`).
 - Sheets: `Sheet` has a grab handle (swipe down), ← back (panel stack in `App`), ✕ close; the phone back gesture closes it.
 - Today is schedule-first (owner: "too crowded", "good morning and straight to the plan"): header, then **at most one** slim `Notice` line
-  (energy question → "Day slipping?" → not logged → never miss twice → low fuel), each closable with ✕ for the day
+  (energy question → "More than fits" → "Day slipping?" → not logged → never miss twice → low fuel), each closable with ✕ for the day
   (`useHidden`, localStorage `recalibrate.hidden`), then "‹ Today ›" day arrows + Reorganize / Fix my day, then the timeline. No week strip (removed).
   Below it on phones: Now / Up next card (✕ hides it for the day; a "Show “Now”" chip brings it back), to-dos,
   reminders, "N of M done" + energy/sleep chips. "Add block" is hidden on phones (the + button does it). Don't add cards above the day.
@@ -107,7 +109,7 @@ Done: sizing/zoom lock, one day view, fixed/flexible + priority/deadline, Fix my
 - iPhone web push shows no action buttons; tapping opens a one-tap question (`AskSheet`). Native buttons need the App Store build.
 - Reminders are scheduled 7 days ahead whenever the plan changes; they stop if the app isn't opened for a week.
 - Next: see `docs/ROADMAP.md`. Done: Sprint 0, Sprint 1 P-1/P-2, Sprint 2 E-1/E-2/E-6, Sprint 3 (Fix my day, minimum day).
-  Next up: Sprint 1 P-3/P-4 (capacity indicator, overload warning; reuse `lib/schedule.ts`), P-6, then Sprint 2 E-3/E-4/E-5.
+  Done too: Sprint 1 P-3/P-4 (capacity, overload). Next up: P-6 ("Find a time" for to-dos / free blocks), then Sprint 2 E-3/E-4/E-5.
 
 ## Conventions
 - Commit to `main` only when asked; deploy is automatic. End commit messages with the session's attribution lines.

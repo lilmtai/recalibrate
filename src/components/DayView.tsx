@@ -8,7 +8,9 @@ import { freeDone, freeLater, markStarted, moveTask } from "../lib/actions";
 import { startFocus } from "../lib/focus";
 import { isWin } from "../lib/stats";
 import { HOUR, snap, Timeline } from "./Timeline";
-import { recoveryTrigger } from "../lib/schedule";
+import { capacity, recoveryTrigger, type Capacity } from "../lib/schedule";
+import { multiplier } from "../lib/stats";
+import { lenLabel } from "../lib/dayLayout";
 import { Icon } from "./Icon";
 import { suggestEmoji } from "../lib/emoji";
 
@@ -116,11 +118,13 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
   // offer "Fix my day" when the day slips (never applied without approval)
   const trigger = isToday ? recoveryTrigger(tasks, now, { lowEnergy: lowDay, runningId: state.focus?.taskId }) : null;
   const canFix = date >= today() && tasks.some((t) => t.status === "open");
+  // how full the (rest of the) day is: today and days ahead
+  const cap = date >= today() ? capacity({ tasks, now: isToday ? now : -1, dayHours: hrs, runningId: state.focus?.taskId, multiplier: multiplier(state) }) : null;
   const confirmMove = (t: Task) => window.confirm(`“${t.title}” is a fixed appointment. Move it anyway?`);
 
   return (
     <>
-      <Notice date={date} isToday={isToday} hidden={hidden} hide={hide} trigger={canFix ? trigger : null} toLog={toLog} repeat={repeat} lowDay={lowDay} />
+      <Notice date={date} isToday={isToday} hidden={hidden} hide={hide} trigger={canFix ? trigger : null} over={cap?.over || 0} toLog={toLog} repeat={repeat} lowDay={lowDay} />
 
       <div className="grid">
         <section>
@@ -140,6 +144,7 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
               {!reorg && <button className="btn primary small addblock" onClick={() => open({ type: "block", date })}>Add block</button>}
             </div>
           </div>
+          {cap && !reorg && cap.window > 0 && <CapacityLine cap={cap} onOpen={() => open({ type: "capacity", date })} />}
           {reorg && (
             <div className="banner calm reorgbar">
               <span><b>Tap</b> a block to lift it into the tray. Drag a block to move it, or drag its bottom edge to change its length.</span>
@@ -446,9 +451,9 @@ function useHidden(date: string): [string[], (key: string, on?: boolean) => void
  * At most one slim line above the day, most useful first: the morning energy question, a slipping day,
  * unlogged blocks, "never miss twice", a low-fuel day. Each closes with ✕ for the rest of the day.
  */
-function Notice({ date, isToday, hidden, hide, trigger, toLog, repeat, lowDay }: {
+function Notice({ date, isToday, hidden, hide, trigger, over, toLog, repeat, lowDay }: {
   date: string; isToday: boolean; hidden: string[]; hide: (k: string) => void;
-  trigger: string | null; toLog: Task[]; repeat?: Task; lowDay: boolean;
+  trigger: string | null; over: number; toLog: Task[]; repeat?: Task; lowDay: boolean;
 }) {
   const { state, update, open } = useApp();
   const ci = state.checkins[date] || {};
@@ -463,6 +468,15 @@ function Notice({ date, isToday, hidden, hide, trigger, toLog, repeat, lowDay }:
           {(["low", "steady", "high"] as const).map((e) => <button key={e} onClick={() => setEnergy(e)}>{e[0].toUpperCase() + e.slice(1)}</button>)}
         </span>
         <button className="nx" aria-label="Skip today's check-in" onClick={() => update((s) => { s.checkins[date] = { ...(s.checkins[date] || {}), skipped: true }; })}><Icon name="close" size={16} /></button>
+      </div>
+    );
+  }
+  if (over >= 15 && !hidden.includes("over")) {
+    return (
+      <div className="notice">
+        <span className="ntext"><b>More than fits</b> · {lenLabel(over)} over{isToday ? " for the rest of today" : ""}</span>
+        <button className="btn small" onClick={() => open({ type: "recover", date, mode: "shorten" })}>Make it fit</button>
+        {x("over")}
       </div>
     );
   }
@@ -501,4 +515,21 @@ function Notice({ date, isToday, hidden, hide, trigger, toLog, repeat, lowDay }:
     );
   }
   return null;
+}
+
+/** One slim line under the day header: a bar of planned / buffer / free, and the free time in words. Tap for details. */
+function CapacityLine({ cap, onOpen }: { cap: Capacity; onOpen: () => void }) {
+  const total = Math.max(1, cap.available);
+  const pct = (m: number) => `${Math.max(0, Math.min(100, (m / total) * 100))}%`;
+  const room = Math.max(0, cap.available - cap.buffer);
+  const label = cap.over > 0 ? `room for ${lenLabel(room)}` : cap.free > 0 ? `${lenLabel(cap.free)} free` : "Just fits";
+  return (
+    <button className={`capline ${cap.over > 0 ? "over" : ""}`} onClick={onOpen} aria-label={`How full: ${label}. ${lenLabel(cap.planned)} planned. Details`}>
+      <span className="capbar" aria-hidden="true">
+        <i className="p" style={{ width: pct(cap.planned) }} />
+        <i className="b" style={{ width: pct(Math.min(cap.buffer, Math.max(0, cap.available - cap.planned))) }} />
+      </span>
+      <span className="captext">{cap.over > 0 ? <><b>{lenLabel(cap.planned)} planned</b> · {label}</> : <><b>{label}</b> · {lenLabel(cap.planned)} planned</>}</span>
+    </button>
+  );
 }

@@ -747,3 +747,22 @@ input, select, textarea { font-size: 16px !important; }
   .daynav2 .iconbtn { width: 32px; }
   .daylabel { font-size: 16px; padding: 4px 2px; }
 }
+
+/* how full is the day (P-3) */
+.capline { width: 100%; display: flex; align-items: center; gap: 10px; margin: 0 0 10px; padding: 2px 2px; border: 0; background: none; color: var(--muted); font-size: 13px; text-align: left; }
+.capbar { flex: none; position: relative; display: flex; width: 88px; height: 6px; border-radius: 3px; overflow: hidden; background: var(--sunk); }
+.capbar i { display: block; height: 100%; }
+.capbar .f { background: var(--faint); }
+.capbar .p { background: var(--fg); }
+.capbar .b { background: repeating-linear-gradient(90deg, var(--faint) 0 3px, transparent 3px 5px); opacity: .7; }
+.captext { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.captext b { color: var(--good); font-weight: 700; }
+.capline.over .captext b { color: var(--warn); }
+.capline.over .capbar .p { background: var(--warn); }
+.capbig { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.capbig b { font-family: var(--display); font-weight: 400; font-size: 28px; color: var(--good); }
+.capbig.over b { color: var(--warn); }
+.capbig .capbar { width: 100%; height: 10px; border-radius: 5px; }
+.capbig.over .capbar .p { background: var(--warn); }
+.caprows { list-style: none; margin: 14px 0 0; padding: 0; }
+.caprows li { display: flex; gap: 10px; align-items: baseline; padding: 10px 0; border-top: 1px solid var(--line); font-size: 15px; }

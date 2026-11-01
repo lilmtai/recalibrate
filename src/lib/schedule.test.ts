@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyRecovery, earliestFit, proposeRecovery, recoveryTrigger, topTask, type RecoveryInput } from "./schedule";
+import { applyRecovery, capacity, earliestFit, proposeLighten, proposeRecovery, recoveryTrigger, topTask, type RecoveryInput } from "./schedule";
 import { tasksFor } from "./plan";
 import { routine, state, task, TODAY } from "../test/fixtures";
 import type { Task } from "../types";
@@ -197,5 +197,86 @@ describe("recoveryTrigger (only offers, never applies)", () => {
     expect(recoveryTrigger([task({ start: "08:00", dur: 30 }), task({ start: "09:00", dur: 30 })], min(10))).toMatch(/2 blocks/);
     expect(recoveryTrigger([task({ start: "14:00", energy: "high" })], min(10), { lowEnergy: true })).toMatch(/Low energy/);
     expect(recoveryTrigger([task({ start: "14:00" })], min(10))).toBeNull();
+  });
+});
+
+describe("capacity (P-3)", () => {
+  const cap = (tasks: Task[], now: number, multiplier?: number) => capacity({ tasks, now, dayHours: HOURS, multiplier });
+  it("a future day: the whole window, minus fixed appointments, minus a 15% buffer", () => {
+    const c = cap([task({ start: "09:00", dur: 120 }), task({ start: "14:00", dur: 60, fixed: true })], -1);
+    expect(c.window).toBe(960); // 07:00–23:00
+    expect(c.fixed).toBe(60);
+    expect(c.available).toBe(900);
+    expect(c.buffer).toBe(144);
+    expect(c.planned).toBe(120);
+    expect(c.free).toBe(900 - 144 - 120);
+    expect(c.over).toBe(0);
+  });
+  it("today: time already passed is gone, finished blocks don't count, a running block counts what's left", () => {
+    const c = cap([
+      task({ id: "done", start: "08:00", dur: 60, status: "done" }),
+      task({ id: "run", start: "17:30", dur: 60, startedAt: "x" }),
+      task({ id: "later", start: "20:00", dur: 60 }),
+      task({ id: "fx", start: "17:00", dur: 60, fixed: true }), // half of it is past
+    ], min(18));
+    expect(c.window).toBe(300);
+    expect(c.fixed).toBe(0);
+    expect(c.planned).toBe(30 + 60);
+    expect(c.buffer).toBe(45);
+  });
+  it("a missed block still counts (it still needs doing); long hard work adds 10 min of buffer", () => {
+    const c = cap([task({ start: "08:00", dur: 30 }), task({ start: "19:00", dur: 90, energy: "high" })], min(18));
+    expect(c.planned).toBe(120);
+    expect(c.buffer).toBe(45 + 10);
+  });
+  it("overload when planned is more than available − buffer; realistic uses the time multiplier", () => {
+    const c = cap([task({ start: "19:00", dur: 180 }), task({ start: "22:00", dur: 60 })], min(19), 1.25);
+    expect(c.window).toBe(240);
+    expect(c.buffer).toBe(36);
+    expect(c.over).toBe(240 - (240 - 36));
+    expect(c.realistic).toBe(300);
+    expect(c.free).toBeLessThan(0);
+  });
+});
+
+describe("proposeLighten (P-4 overload fixes)", () => {
+  const base = { date: TODAY, now: min(16), dayHours: HOURS, later: [{ date: "2026-11-05", tasks: [] as Task[] }] };
+  // 16:00–23:00 = 420 min, minus the 60-min dentist = 360, minus a 63-min buffer = 297 of room; 420 planned → 123 over
+  const day = () => [
+    task({ id: "deep", start: "16:00", dur: 120, minDur: 60, priority: "high" }),
+    task({ id: "admin", start: "18:00", dur: 90, minDur: 30, priority: "low" }),
+    task({ id: "gym", start: "19:30", dur: 60, minDur: 30 }),
+    task({ id: "call", start: "20:30", dur: 30, noPostpone: true }),
+    task({ id: "meal", start: "21:00", dur: 60, essential: true }),
+    task({ id: "read", start: "22:00", dur: 60, priority: "low" }),
+    task({ id: "dent", start: "17:00", dur: 60, fixed: true }),
+  ];
+  it("shorten: minimum versions, least important first, only until it fits", () => {
+    const tasks = day();
+    expect(capacity({ ...base, tasks }).over).toBe(123);
+    const p = proposeLighten({ ...base, tasks }, "shorten");
+    expect(p.changes.map((c) => c.id)).toEqual(["admin", "gym", "deep"]);
+    expect(p.changes[0]).toMatchObject({ kind: "shorten", to: { start: "18:00", dur: 30 } });
+    expect(p.over).toBe(0);
+  });
+  it("postpone: low priority first, to the next free slot; never essential, must-today, high priority or fixed", () => {
+    const p = proposeLighten({ ...base, tasks: day() }, "postpone");
+    const ids = p.changes.map((c) => c.id);
+    expect(ids.slice(0, 2)).toEqual(["read", "admin"]);
+    for (const no of ["call", "meal", "deep", "dent"]) expect(ids).not.toContain(no);
+    expect(p.changes[0]).toMatchObject({ kind: "postpone", to: { date: "2026-11-05", start: "22:00" } });
+  });
+  it("says how much is still over when the allowed changes aren't enough; routines are skipped, not moved", () => {
+    const s = state({ routines: [routine({ start: "18:00", dur: 300, days: [2] })] });
+    const tasks = [...tasksFor(s, TODAY), task({ id: "x", start: "16:00", dur: 400, noPostpone: true })];
+    const p = proposeLighten({ ...base, tasks }, "postpone");
+    expect(p.changes).toHaveLength(1);
+    expect(p.changes[0].kind).toBe("skip");
+    expect(p.over).toBeGreaterThan(0);
+  });
+  it("nothing to do when the day fits", () => {
+    const p = proposeLighten({ ...base, tasks: [task({ start: "17:00", dur: 60 })] }, "shorten");
+    expect(p.changes).toEqual([]);
+    expect(p.over).toBe(0);
   });
 });

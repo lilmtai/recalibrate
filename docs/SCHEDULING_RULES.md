@@ -42,6 +42,16 @@ Every rule here needs a unit test.
   versions, or postpone low-priority ones. Never act without approval.
 - Use the personal **time multiplier** (actual ÷ planned, from history) to show "realistic planned time".
 
+As built (`capacity`, `proposeLighten` in `lib/schedule.ts`, tested):
+- Window = day hours from now (today) or from the start (future days). Available = window − fixed (the part inside it).
+- Planned = open flexible blocks; a running one counts what's left; a missed, unlogged one counts fully (still to do).
+- Buffer = 15% of the window + 10 min per open 60+ min high-energy / hard block, capped at available.
+- Overload = planned − (available − buffer), shown when 15+ min.
+- Fixes, least important first (low priority, no / later deadline, latest start), only until it fits:
+  **Shorten** = minimum versions; **Postpone** = next free slot in 7 days (routines: skip today; none: tray), never
+  high priority, essential, "has to happen today" or due-today blocks; **Rearrange** = Fix my day. Fixed and running
+  blocks are never touched.
+
 ## Recovery
 Trigger: user taps "I'm behind" / "Fix my day", a block overruns, a check-in shows the plan slipped, or
 low energy is reported.

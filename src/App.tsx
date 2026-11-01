@@ -12,7 +12,7 @@ import { WorkView } from "./components/WorkView";
 import { PageSheet, ProjectSheet } from "./components/WorkSheets";
 import { WydSheet } from "./components/WydSheet";
 import { ReviewSheet } from "./components/ReviewSheet";
-import { RecoverSheet } from "./components/RecoverSheet";
+import { CapacitySheet, RecoverSheet } from "./components/RecoverSheet";
 import { CategorySheet } from "./components/CategorySheet";
 import { categoriesOf } from "./constants";
 import { EntrySheet } from "./components/EntrySheet";
@@ -294,6 +294,7 @@ export default function App() {
       {sheet?.type === "free" && <FreeSheet key={sheet.item?.id || "new"} item={sheet.item} />}
       {sheet?.type === "freedue" && <FreeDueSheet id={sheet.id} />}
       {sheet?.type === "review" && <ReviewSheet />}
+      {sheet?.type === "capacity" && <CapacitySheet date={sheet.date} />}
       {sheet?.type === "recover" && <RecoverSheet key={sheet.date + (sheet.mode || "")} date={sheet.date} mode={sheet.mode} />}
       {sheet?.type === "categories" && <CategorySheet />}
       {sheet?.type === "wyd" && <WydSheet key={`${sheet.date}${sheet.at}${sheet.from}`} date={sheet.date} at={sheet.at} from={sheet.from} promptKey={sheet.promptKey} />}
