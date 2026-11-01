@@ -108,7 +108,7 @@ Rules for all AI work: `AI_BEHAVIOUR.md`.
 | Your own categories (12 defaults incl. cooking, cleaning, errands…), each with colour + emoji | `CategorySheet`, `state.categories` |
 | Emoji on every block, suggested from the title | `lib/emoji.ts` |
 | Ongoing blocks (no finish time) that run until ✓ | `Task.ongoing`, `completeTask` |
-| One day view: hour timeline with emoji pills, times, one-tap ✓, free-time "tap to plan", and a week strip | `Timeline.tsx`, `WeekStrip.tsx`, `lib/dayLayout.ts` |
+| One day view: hour timeline with emoji pills, times, one-tap ✓, free-time "tap to plan", ‹ Today › arrows | `Timeline.tsx`, `lib/dayLayout.ts` |
 | Native-app sizing (no zoom, no sideways scroll) | `index.html`, `lib/zoom.ts`, `index.css` |
 | Work tab: projects, one next step each, steps, journal, drafts, goals, quick capture | `WorkView`, `WorkSheets`, `lib/work.ts` |
 | Playbook: turn a miss into an if-then fix with a reminder, scored over time | `MissSheet`, `PlaybookView` |

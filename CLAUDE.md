@@ -57,16 +57,16 @@ Rules for every agent (Claude Code, Codex):
 - Free blocks (`FreeItem` in `state.free`): no set time, repeat every N days, show as due in the to-do card,
   remind at `remindAt` daily while due/overdue (`cuesFor` kind `free`), Done moves `nextDue` forward (`lib/actions.ts`).
 - Sheets: `Sheet` has a grab handle (swipe down), ← back (panel stack in `App`), ✕ close; the phone back gesture closes it.
-- Today is schedule-first (owner: "too crowded"): header, week strip, then **at most one** slim `Notice` line
+- Today is schedule-first (owner: "too crowded", "good morning and straight to the plan"): header, then **at most one** slim `Notice` line
   (energy question → "Day slipping?" → not logged → never miss twice → low fuel), each closable with ✕ for the day
-  (`useHidden`, localStorage `recalibrate.hidden`), then "N of M done" + Reorganize / Fix my day, then the timeline.
+  (`useHidden`, localStorage `recalibrate.hidden`), then "‹ Today ›" day arrows + Reorganize / Fix my day, then the timeline. No week strip (removed).
   Below it on phones: Now / Up next card (✕ hides it for the day; a "Show “Now”" chip brings it back), to-dos,
-  reminders, energy/sleep chips. "Add block" is hidden on phones (the + button does it). Don't add cards above the day.
+  reminders, "N of M done" + energy/sleep chips. "Add block" is hidden on phones (the + button does it). Don't add cards above the day.
 - `src/components/`: `DayView` (Today: notice line, timeline, reorganize + tray, Now card, to-dos + due free blocks), `Timeline`, `MyDayView`, `WeekView`,
   `PatternsView`, `PlaybookView`, `MeView` (routines, day hours, account, phone app, example data), and the sheets
   (`BlockSheet`, `LogSheet`, `WhySheet` (one-tap reason), `MissSheet`/`CheckSheet`, `AskSheet`, `FreeSheet`/`FreeDueSheet`,
   `EntrySheet`, `QuickSheet`, `WelcomeSheet`, `SetupSheet` (+ `lib/pushCheck.ts` "Check notifications"), `AccountSheet`).
-- Today has a week strip (`components/WeekStrip.tsx`) and **one** hour-by-hour day view (`components/Timeline.tsx`, 76px/hour):
+- Today has **one** hour-by-hour day view (`components/Timeline.tsx`, 76px/hour):
   each block has an emoji pill, times "13:30 – 14:00 (30m)" + title, category tint and a one-tap ✓ circle. Three sizes:
   `short` (<30 min, one line), `mid` (30 min, two small lines), `tall`. Side-by-side lanes for overlaps and free-time
   "tap to plan" boxes come from `lib/dayLayout.ts` (pure, tested). Reorganize, drag, resize and tray placing use the same view.
@@ -78,8 +78,9 @@ Rules for every agent (Claude Code, Codex):
 - `supabase/schema.sql`, `supabase/push.sql`, `supabase/functions/send-push/index.ts`: server side (run/deployed by the owner in the dashboard).
 
 ## Design rules
-- Champagne palette: ivory `#fbf8f2`, navy `#18224a` (ink + primary), champagne gold `#c9a45c` for special moments.
-  Dark mode: navy ground, gold primary. Orange (`--warn`) only means "needs attention".
+- Simple neutral palette (owner, Nov 2026: "something simple"; replaced the champagne/navy/gold one): light = soft grey
+  `#f6f6f7` ground, white cards, near-black ink + buttons `#111114`; dark = `#0b0b0c` ground, `#161618` cards, white
+  buttons. One blue (`--gold` token, name kept) marks now / focus / wins. Orange (`--warn`) only means "needs attention".
 - Categories are data (`state.categories`, defaults in `constants.ts → DEFAULT_CATEGORIES`: work, side hustle, health,
   social, me time, cooking, cleaning, errands, learning, admin, family, rest). Users add / rename / recolour / remove them
   (`CategorySheet`). Colours become CSS variables `--c-<key>` injected by `App`; use `categoriesOf` / `catOf` / `catLabel`.

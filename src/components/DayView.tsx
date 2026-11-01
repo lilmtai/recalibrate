@@ -8,7 +8,6 @@ import { freeDone, freeLater, markStarted, moveTask } from "../lib/actions";
 import { startFocus } from "../lib/focus";
 import { isWin } from "../lib/stats";
 import { HOUR, snap, Timeline } from "./Timeline";
-import { WeekStrip } from "./WeekStrip";
 import { recoveryTrigger } from "../lib/schedule";
 import { Icon } from "./Icon";
 import { suggestEmoji } from "../lib/emoji";
@@ -17,7 +16,7 @@ type TrayItem = { kind: "note" | "task" | "free"; id: string; title: string; dur
 type Ghost = TrayItem & { x: number; y: number; moved: boolean };
 
 export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
-  const { state, update, date, open, now, toast } = useApp();
+  const { state, update, date, setDate, open, now, toast } = useApp();
   const isToday = date === today();
   const ci = state.checkins[date] || {};
   const tasks = tasksFor(state, date);
@@ -121,16 +120,18 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
 
   return (
     <>
-      <WeekStrip />
-
       <Notice date={date} isToday={isToday} hidden={hidden} hide={hide} trigger={canFix ? trigger : null} toLog={toLog} repeat={repeat} lowDay={lowDay} />
 
       <div className="grid">
         <section>
           <div className="sechead">
-            <h2 className="dayhead">
-              <span className="dayname">{parseKey(date).toLocaleDateString(undefined, { weekday: "long" })}{tasks.length > 0 && " · "}</span>
-              {tasks.length > 0 && <span className="donecount">{tasks.filter(isWin).length} of {tasks.length} done</span>}</h2>
+            <div className="daynav2" role="group" aria-label="Day">
+              <button className="iconbtn" aria-label="Previous day" onClick={() => setDate(addDays(date, -1))}><Icon name="back" size={18} /></button>
+              <button className="daylabel" onClick={() => setDate(today())} aria-label={isToday ? "Today" : "Back to today"}>
+                {isToday ? "Today" : parseKey(date).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}
+              </button>
+              <button className="iconbtn flip" aria-label="Next day" onClick={() => setDate(addDays(date, 1))}><Icon name="back" size={18} /></button>
+            </div>
             <div className="row tight">
               <button className={`btn small ${reorg ? "primary" : ""}`} onClick={() => { setReorg(!reorg); setSelected(null); }}>
                 {reorg ? "Done reorganizing" : "Reorganize"}
@@ -162,7 +163,7 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
           {(reorg || tray.length > 0) && <TrayCard tray={tray} drag={drag} selected={selected} reorg={reorg} />}
           <TodoCard date={date} isToday={isToday} drag={drag} selected={selected} />
           <CuesCard cues={cues} now={isToday ? now : -1} />
-          <CheckinRow date={date} notificationsOn={notificationsOn} showNow={isToday && hidden.includes("now")} onShowNow={() => hide("now", false)} />
+          <CheckinRow date={date} done={tasks.filter(isWin).length} total={tasks.length} notificationsOn={notificationsOn} showNow={isToday && hidden.includes("now")} onShowNow={() => hide("now", false)} />
         </aside>
       </div>
 
@@ -388,7 +389,7 @@ function CuesCard({ cues, now }: { cues: ReturnType<typeof cuesFor>; now: number
 }
 
 /** Energy / sleep chips under the day; tap one to change it. (The morning question is the notice line on top.) */
-function CheckinRow({ date, notificationsOn, showNow, onShowNow }: { date: string; notificationsOn: boolean; showNow: boolean; onShowNow: () => void }) {
+function CheckinRow({ date, done, total, notificationsOn, showNow, onShowNow }: { date: string; done: number; total: number; notificationsOn: boolean; showNow: boolean; onShowNow: () => void }) {
   const { state, update, open } = useApp();
   const ci = state.checkins[date] || {};
   const [editing, setEditing] = useState(false);
@@ -415,6 +416,7 @@ function CheckinRow({ date, notificationsOn, showNow, onShowNow }: { date: strin
   }
   return (
     <div className="chiprow">
+      {total > 0 && <span className="chipbtn good">{done} of {total} done</span>}
       <button className="chipbtn" onClick={() => setEditing(true)}>Energy · {ci.energy ? cap(ci.energy) : "not set"}</button>
       <button className="chipbtn" onClick={() => setEditing(true)}>{ci.sleep !== undefined ? `Slept ${ci.sleep} h` : "Sleep · not set"}</button>
       {showNow && <button className="chipbtn" onClick={onShowNow}>Show “Now”</button>}
