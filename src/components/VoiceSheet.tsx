@@ -4,7 +4,7 @@ import { useApp } from "../ctx";
 import { BARRIER_LABEL, INSTEAD_LABEL, catLabel } from "../constants";
 import { supabase } from "../lib/supabase";
 import { applyVoice, buildVoiceRequest, parseVoiceResult, type VoiceItem, type VoiceProposal } from "../lib/voice";
-import { fmt, longDate, today } from "../lib/time";
+import { fmt, longDate, toMin, today } from "../lib/time";
 import { Sheet } from "./Sheet";
 import { Icon } from "./Icon";
 
@@ -81,13 +81,28 @@ export function VoiceSheet({ date }: { date: string }) {
       setPhase("write");
       return setError(code === "not_deployed" ? "The “log-day” function isn't in Supabase yet (see the setup steps)." : ERRORS[code] || "Couldn't reach the server. Check your connection and try again.");
     }
-    const p = parseVoiceResult(data?.result, state, date);
+    const p = parseVoiceResult(data?.result, state, date, isToday ? now : 18 * 60);
     setProposal(p);
     setOff(new Set());
     setPhase("review");
   };
 
-  const chosen = (proposal?.items || []).filter((i) => !off.has(i.id));
+  const chosen = (proposal?.items || []).filter((i) => !off.has(i.id) && (i.kind !== "extra" || i.end > i.start));
+  // fix an estimated time before approving
+  const setTime = (id: string, which: "start" | "end", v: string) => {
+    if (!v || !proposal) return;
+    const m = toMin(v);
+    setProposal({
+      ...proposal,
+      items: proposal.items.map((x) => {
+        if (x.id !== id || x.kind !== "extra") return x;
+        const next = { ...x, [which]: m, guessedEnd: false };
+        // moving the start keeps the length
+        if (which === "start") next.end = Math.min(1440, m + (x.end - x.start));
+        return next;
+      }),
+    });
+  };
   const approve = () => {
     let n = 0;
     update((s) => { n = applyVoice(s, date, chosen); });
@@ -102,7 +117,7 @@ export function VoiceSheet({ date }: { date: string }) {
       return { title: i.title, detail: bits.join(" · ") };
     }
     if (i.kind === "extra") {
-      const bits = [`${fmt(i.start)} – ${fmt(i.end)}${i.guessedEnd ? " (about)" : ""}`, i.instead ? `instead (${INSTEAD_LABEL[i.instead].toLowerCase()})` : "", i.category ? catLabel(state, i.category) : ""].filter(Boolean);
+      const bits = [i.instead ? `instead (${INSTEAD_LABEL[i.instead].toLowerCase()})` : "", i.category ? catLabel(state, i.category) : ""].filter(Boolean);
       return { title: i.title, detail: bits.join(" · ") };
     }
     if (i.kind === "energy") return { title: "Energy", detail: i.energy };
@@ -122,7 +137,16 @@ export function VoiceSheet({ date }: { date: string }) {
               const on = !off.has(i.id);
               return (
                 <li key={i.id} className={on ? "" : "offc"}>
-                  <div className="grow"><div className="rtitle">{l.title}</div><div className="small muted">{l.detail}</div></div>
+                  <div className="grow"><div className="rtitle">{l.title}</div><div className="small muted">{l.detail}</div>
+                    {i.kind === "extra" && (
+                      <div className="voicetimes">
+                        <input type="time" aria-label={`${i.title} start`} value={fmt(i.start)} onChange={(e) => setTime(i.id, "start", e.target.value)} />
+                        <span>–</span>
+                        <input type="time" aria-label={`${i.title} end`} value={fmt(Math.min(i.end, 1439))} onChange={(e) => setTime(i.id, "end", e.target.value)} />
+                        {i.guessedEnd && <span className="small muted">estimated</span>}
+                      </div>
+                    )}
+                  </div>
                   <input type="checkbox" checked={on} aria-label={`Include: ${l.title}`}
                     onChange={() => setOff((o) => { const n = new Set(o); if (n.has(i.id)) n.delete(i.id); else n.add(i.id); return n; })} />
                 </li>

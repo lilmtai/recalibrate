@@ -53,13 +53,24 @@ describe("parseVoiceResult (never trust, always check)", () => {
     ]);
     expect(p.skipped).toContain("Emails (already logged)");
   });
-  it("needs a start time for extra entries; a missing end becomes 30 minutes; unknown keys are dropped", () => {
+  it("never drops an entry for a missing time: it's estimated in the order told and marked; unknown keys are dropped", () => {
     const extras = p.items.filter((i) => i.kind === "extra");
     expect(extras).toEqual([
       { kind: "extra", id: "e:0", title: "Phone", start: 1080, end: 1140, guessedEnd: false, instead: "phone" },
       { kind: "extra", id: "e:1", title: "Dinner", start: 1200, end: 1230, guessedEnd: true, category: "cooking" },
+      { kind: "extra", id: "e:2", title: "Nap", start: 1230, end: 1260, guessedEnd: true },
+      { kind: "extra", id: "e:3", title: "Walk", start: 1260, end: 1290, guessedEnd: true },
     ]);
-    expect(p.skipped).toEqual(expect.arrayContaining(["Nap (no time)", "Walk (no time)"]));
+    expect(p.skipped).toEqual(["Emails (already logged)"]);
+  });
+  it("untimed entries told before any time work back from now (the owner's breakfast example)", () => {
+    const q = parseVoiceResult({ blocks: [], extra: [
+      { title: "Went home, made breakfast for my wife and me", start: null, end: null, category: null, instead: null },
+      { title: "Back to the coffee shop to continue work", start: null, end: null, category: "work", instead: null },
+    ], energy: null, sleep: null, todos: [], summary: "" }, s, TODAY, 11 * 60);
+    const ex = q.items.filter((i) => i.kind === "extra");
+    expect(ex.map((i) => i.kind === "extra" && [i.start, i.end, i.guessedEnd])).toEqual([[600, 630, true], [630, 660, true]]);
+    expect(q.skipped).toEqual([]);
   });
   it("energy, sleep (to the half hour), to-dos and the summary", () => {
     expect(p.items.find((i) => i.kind === "energy")).toMatchObject({ energy: "low" });

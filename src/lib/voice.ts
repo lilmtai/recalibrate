@@ -21,7 +21,7 @@ export type VoiceItem =
 export interface VoiceProposal {
   items: VoiceItem[];
   summary: string;
-  /** things Claude mentioned that couldn't be logged (no time, unknown block…) */
+  /** things Claude mentioned that can't be logged (a block that's already logged…) */
   skipped: string[];
 }
 
@@ -49,8 +49,11 @@ const hhmm = (v: unknown): number | null => {
   return h <= 24 && m < 60 && h * 60 + m <= 1440 ? h * 60 + m : null;
 };
 
-/** Check Claude's answer against the real plan and lists; anything unknown is dropped, never guessed. */
-export function parseVoiceResult(raw: unknown, s: State, date: string): VoiceProposal {
+/**
+ * Check Claude's answer against the real plan and lists; unknown blocks and keys are dropped, never guessed.
+ * `anchor` = where untimed entries end (now, for today).
+ */
+export function parseVoiceResult(raw: unknown, s: State, date: string, anchor = 18 * 60): VoiceProposal {
   const r = obj(raw) || {};
   const tasks = tasksFor(s, date);
   const cats = new Set(categoriesOf(s).map((c) => c.key));
@@ -75,20 +78,43 @@ export function parseVoiceResult(raw: unknown, s: State, date: string): VoicePro
     });
   }
 
-  arr(r.extra).forEach((e, i) => {
-    const title = text(e.title, 80);
-    if (!title) return;
-    const start = hhmm(e.start);
-    let end = hhmm(e.end);
-    if (start === null) { skipped.push(`${title} (no time)`); return; }
+  // other entries, in the order told. A missing time is never a reason to drop one: it's estimated
+  // (after the entry told before it, or, for the first ones, working back from the next known time /
+  // `anchor`, usually now) and marked so the user can fix it before approving.
+  type X = { e: Record<string, unknown>; i: number; title: string; start: number | null; end: number | null; guessed?: boolean };
+  const extras: X[] = arr(r.extra).map((e, i) => ({ e, i, title: text(e.title, 80), start: hhmm(e.start), end: hhmm(e.end) })).filter((x) => x.title);
+  const firstKnown = extras.findIndex((x) => x.start !== null);
+  // leading entries with no time: back from the first known start (or the anchor)
+  let cursor = firstKnown >= 0 ? extras[firstKnown].start! : anchor;
+  for (let k = (firstKnown >= 0 ? firstKnown : extras.length) - 1; k >= 0; k--) {
+    const x = extras[k];
+    x.end = x.end !== null && x.end <= cursor ? x.end : cursor;
+    x.start = Math.max(0, x.end - 30);
+    x.guessed = true;
+    cursor = x.start;
+  }
+  // later entries with no time: right after the one before
+  for (let k = Math.max(0, firstKnown); k < extras.length; k++) {
+    const x = extras[k];
+    if (x.start !== null) continue;
+    const prev = extras[k - 1];
+    const prevEnd = prev.end !== null && prev.end > prev.start! ? prev.end : prev.start! + 30;
+    const next = extras.slice(k + 1).find((y) => y.start !== null)?.start ?? undefined;
+    x.start = Math.min(1425, prevEnd);
+    x.end = Math.min(1440, next != null && next > x.start ? Math.min(next, x.start + 30) : x.start + 30);
+    x.guessed = true;
+  }
+  for (const x of extras) {
+    const start = x.start!;
+    let end = x.end;
     const guessedEnd = end === null || end <= start;
     if (guessedEnd) end = Math.min(1440, start + 30);
     items.push({
-      kind: "extra", id: `e:${i}`, title, start, end: end!, guessedEnd,
-      ...(typeof e.category === "string" && cats.has(e.category) ? { category: e.category } : {}),
-      ...(typeof e.instead === "string" && insteads.has(e.instead) ? { instead: e.instead as InsteadKey } : {}),
+      kind: "extra", id: `e:${x.i}`, title: x.title, start, end: end!, guessedEnd: guessedEnd || !!x.guessed,
+      ...(typeof x.e.category === "string" && cats.has(x.e.category) ? { category: x.e.category } : {}),
+      ...(typeof x.e.instead === "string" && insteads.has(x.e.instead) ? { instead: x.e.instead as InsteadKey } : {}),
     });
-  });
+  }
 
   if (r.energy === "low" || r.energy === "steady" || r.energy === "high") items.push({ kind: "energy", id: "energy", energy: r.energy });
   if (typeof r.sleep === "number" && r.sleep > 0 && r.sleep <= 16) items.push({ kind: "sleep", id: "sleep", hours: Math.round(r.sleep * 2) / 2 });

@@ -40,7 +40,8 @@ Never rely on the language model for calendar arithmetic (durations, overlaps, t
   (done / partly / missed / "if not", minutes, reason), other entries with times, energy, sleep, to-dos and a
   one-line summary.
 - App: `lib/voice.ts` (pure, tested) checks every item against the real plan and lists (unknown ids, keys or
-  times are dropped, blocks already logged are never overwritten), shows a tick list, and saves only what the
+  times are dropped, blocks already logged are never overwritten; an entry with no time is never dropped: its time is
+  estimated in the order told, working back from now, marked "estimated" and editable on the review screen), shows a tick list, and saves only what the
   user approves (`applyVoice`, same rules as the log panel).
 - Not stored yet: the proposal itself (`ai_recommendation`) — add with the AI settings switch.
 

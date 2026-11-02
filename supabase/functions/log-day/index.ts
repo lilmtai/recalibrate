@@ -42,8 +42,8 @@ export function outputSchema(barriers: string[], instead: string[], categories: 
           required: ["title", "start", "end", "category", "instead"],
           properties: {
             title: { type: "string", description: "short, like the person said it: 'Phone', 'Lunch with Sam'" },
-            start: nullable({ type: "string", description: "HH:MM, 24h; estimate from context, null if no clue" }),
-            end: nullable({ type: "string", description: "HH:MM, 24h; null if unknown" }),
+            start: nullable({ type: "string", description: "HH:MM, 24h. Always give your best estimate (see rules); null only if it can't be placed at all" }),
+            end: nullable({ type: "string", description: "HH:MM, 24h, best estimate" }),
             category: nullable({ type: "string", enum: categories }),
             instead: nullable({ type: "string", enum: instead, description: "set when it replaced a planned block" }),
           },
@@ -62,7 +62,8 @@ They may ramble, repeat themselves or use filler words; dictation may garble wor
 Rules:
 - Only report what they said or clearly implied. Never invent blocks, times or reasons. Leave a planned block out if they didn't mention it.
 - "done" = did it fully; "partial" = some of it; "missed" = didn't happen; "ifnot" = did the fallback ("if not") version.
-- Times are 24h HH:MM on the given date. Estimate from context ("after lunch", "around 8 in the evening") and the plan; use null when there's no clue.
+- Times are 24h HH:MM on the given date. People rarely say clock times, so ESTIMATE them: use what they said ("after lunch", "around 8"), the plan, typical durations (breakfast ~30 min, a commute ~20 min) and the order they told things in. When it's today, the last thing they describe usually ended around time_now (or is still going on), and earlier things come before it, in order. Only use null if an activity truly can't be placed.
+- List "extra" entries in the order they happened.
 - Use the given keys for reasons, instead and categories, or null when none fits.
 - Write titles and notes in the person's language, short. The summary is warm and neutral, never judging.`;
 

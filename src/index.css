@@ -771,3 +771,5 @@ input, select, textarea { font-size: 16px !important; }
 .backbtn { display: inline-flex; align-items: center; gap: 4px; margin: 4px 0 6px -8px; }
 .voicelist li { align-items: center; }
 #voice-text { min-height: 150px; resize: vertical; line-height: 1.45; }
+.voicetimes { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.voicetimes input[type="time"] { padding: 5px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); flex: 0 1 140px; min-width: 0; }
