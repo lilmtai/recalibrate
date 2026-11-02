@@ -7,7 +7,6 @@ import { useReminders } from "./useReminders";
 import { nowMin, parseKey, today } from "./lib/time";
 import { DayView } from "./components/DayView";
 import { WeekView } from "./components/WeekView";
-import { MyDayView } from "./components/MyDayView";
 import { WorkView } from "./components/WorkView";
 import { PageSheet, ProjectSheet } from "./components/WorkSheets";
 import { WydSheet } from "./components/WydSheet";
@@ -37,16 +36,17 @@ import { useHistory } from "./useHistory";
 import { FocusBar, FocusView } from "./components/FocusView";
 
 // Week holds the week plan plus Insights (patterns, playbook) behind a switch.
-type Group = "today" | "myday" | "work" | "week" | "me";
+// My day = work, notes, journal, goals (owner, Nov 2026). What really happened is still recorded
+// (WYD, block logs) for patterns and AI, but has no screen of its own.
+type Group = "today" | "myday" | "week" | "me";
 const GROUPS: { key: Group; label: string; icon: Parameters<typeof Icon>[0]["name"]; first: Tab }[] = [
   { key: "today", label: "Today", icon: "sun", first: "day" },
-  { key: "myday", label: "My day", icon: "clock", first: "myday" },
-  { key: "work", label: "Work", icon: "folder", first: "work" },
+  { key: "myday", label: "My day", icon: "folder", first: "myday" },
   { key: "week", label: "Week", icon: "calendar", first: "week" },
   { key: "me", label: "Me", icon: "person", first: "me" },
 ];
 const groupOf = (t: Tab): Group =>
-  t === "day" ? "today" : t === "myday" ? "myday" : t === "work" ? "work" : t === "week" || t === "patterns" || t === "playbook" ? "week" : "me";
+  t === "day" ? "today" : t === "myday" || t === "work" ? "myday" : t === "week" || t === "patterns" || t === "playbook" ? "week" : "me";
 const VALID: Tab[] = ["day", "myday", "work", "week", "patterns", "playbook", "me"];
 
 const greeting = () => {
@@ -74,7 +74,7 @@ export default function App() {
   stateRef.current = state;
   const [now, setNow] = useState(nowMin());
   // remember the last screen inside each tab (Plan vs. Plan-vs-actual, Patterns vs. Playbook)
-  const lastIn = useRef<Record<Group, Tab>>({ today: "day", myday: "myday", work: "work", week: "week", me: "me" });
+  const lastIn = useRef<Record<Group, Tab>>({ today: "day", myday: "myday", week: "week", me: "me" });
   const setTab = useCallback((t: Tab) => { lastIn.current[groupOf(t)] = t; setTabRaw(t); window.scrollTo({ top: 0 }); }, []);
 
   useEffect(() => {
@@ -134,7 +134,7 @@ export default function App() {
   // halfway → check-in panel, end of block → log panel
   const onCue = useCallback((c: Cue) => {
     if (c.freeId) { setTab("day"); setSheet({ type: "freedue", id: c.freeId }); return; }
-    if (c.kind === "wyd") { setTab("myday"); setDate(today()); setSheet({ type: "wyd", date: today(), at: c.at, promptKey: `wyd:${today()}:${c.at}` }); return; }
+    if (c.kind === "wyd") { setTab("day"); setDate(today()); setSheet({ type: "wyd", date: today(), at: c.at, promptKey: `wyd:${today()}:${c.at}` }); return; }
     const t = tasksFor(stateRef.current, today()).find((x) => x.id === c.taskId);
     if (!t || t.status !== "open") return;
     setTab("day");
@@ -180,7 +180,7 @@ export default function App() {
       pendingLink.current = null;
       window.history.replaceState(null, "", window.location.pathname);
       const d = q.get("date") || today();
-      setTab("myday");
+      setTab("day");
       setDate(d);
       const at = Number(q.get("at")) || undefined;
       setSheet({ type: "wyd", date: d, at, promptKey: at ? `wyd:${d}:${at}` : undefined });
@@ -229,8 +229,7 @@ export default function App() {
   const dayLabel = parseKey(date).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
   const [eyebrow, title] =
     group === "today" ? [dayLabel, isToday ? greeting() : parseKey(date).toLocaleDateString(undefined, { weekday: "long" })]
-    : group === "myday" ? [dayLabel, "My day"]
-    : group === "work" ? ["Projects, journal, goals", "Work"]
+    : group === "myday" ? ["Work, notes, journal, goals", "My day"]
     : group === "week" ? (tab === "week" ? ["Plan ahead", "Your week"] : ["Last 14 days", "Insights"])
     : [sync.email || "Settings and routines", "Me"];
   const initial = (sync.email || "R")[0].toUpperCase();
@@ -266,8 +265,7 @@ export default function App() {
 
         <main key={tab} className="view">
           {tab === "day" && <DayView notificationsOn={push.subscribed} />}
-          {tab === "myday" && <MyDayView />}
-          {tab === "work" && <WorkView />}
+          {(tab === "myday" || tab === "work") && <WorkView />}
           {tab === "week" && <WeekView />}
           {tab === "patterns" && <PatternsView />}
           {tab === "playbook" && <PlaybookView />}

@@ -74,9 +74,9 @@ export function MeView({ sync, pushOn, installed, historyMode }: { sync: { email
         <div className="grow"><b>Account & sync</b><span className="small muted">{sync.email ? `${sync.email} · ${STATUS_LABEL[sync.status]}` : "Sign in to keep your planner on your phone and laptop."}</span>
           {sync.email && (
             <span className="small muted" style={{ display: "block" }}>
-              {historyMode === "table" ? "My day history: stored in its own table, last 60 days on this phone."
-                : historyMode === "blob" ? "My day history: inside your planner (run supabase/history.sql to move it to its own table)."
-                : "My day history: checking…"}
+              {historyMode === "table" ? "Activity history: stored in its own table, last 60 days on this phone."
+                : historyMode === "blob" ? "Activity history: inside your planner (run supabase/history.sql to move it to its own table)."
+                : "Activity history: checking…"}
             </span>
           )}</div>
         <button className={`btn ${sync.email ? "" : "primary"}`} onClick={() => open({ type: "account" })}>{sync.email ? "Manage" : "Sign in"}</button>

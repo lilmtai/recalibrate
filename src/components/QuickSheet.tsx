@@ -6,7 +6,7 @@ import { Sheet } from "./Sheet";
 
 /** The + button: one place to add anything. */
 export function QuickSheet() {
-  const { update, open, close, date, setTab, toast } = useApp();
+  const { update, open, close, date, toast } = useApp();
   const [todo, setTodo] = useState("");
   const addTodo = () => {
     const t = todo.trim();
@@ -19,8 +19,8 @@ export function QuickSheet() {
   const n = nowMin();
   const opts: { icon: IconName; title: string; sub: string; run: () => void }[] = [
     { icon: "block", title: "Plan a block", sub: "Something with a time slot", run: () => open({ type: "block", date }) },
-    { icon: "play", title: "What I'm doing right now", sub: "Start tracking it in one tap", run: () => { setTab("myday"); close(); } },
-    { icon: "pen", title: "Log something I did", sub: "Add it to My day", run: () => open({ type: "entry", date: today(), start: Math.max(0, n - 30), end: n }) },
+    { icon: "play", title: "What I'm doing right now", sub: "Log it in one tap", run: () => open({ type: "wyd", date: today() }) },
+    { icon: "pen", title: "Log something I did", sub: "Kept for your patterns", run: () => open({ type: "entry", date: today(), start: Math.max(0, n - 30), end: n }) },
     { icon: "repeat", title: "New routine", sub: "Same time on the days you pick", run: () => open({ type: "routine" }) },
     { icon: "sparkle", title: "Free block", sub: "No set time, comes back every few weeks (barbershop…)", run: () => open({ type: "free" }) },
   ];

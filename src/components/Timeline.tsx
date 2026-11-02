@@ -121,12 +121,7 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline(
     // a tap (no drag) lifts the block into the tray beside "Up next"
     if (!d.moved) return toTray(t);
     update((s) => moveTask(materialize(s, t), fmt(d.start), d.dur));
-    if (t.routineId) {
-      toast(`Moved for today. Keep ${fmt(d.start)} every week?`, {
-        label: "Every week",
-        run: () => update((s) => { const r = s.routines.find((x) => x.id === t.routineId); if (r) { r.start = fmt(d.start); r.dur = d.dur; } }),
-      });
-    }
+    // moving a routine block here changes this day only; the routine itself is edited in Me → Routines
   };
   const toTray = (t: Task) => update((s) => {
     const real = materialize(s, t);

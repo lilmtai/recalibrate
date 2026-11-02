@@ -27,7 +27,9 @@ Rules for every agent (Claude Code, Codex):
 ## Code map
 - `src/App.tsx`: shell, tabs, sheets (pop-up panels), toasts, deep links from notifications, applying notification answers.
 - `src/ctx.ts`: app context + `SheetState` union (every pop-up panel) + `Tab` (`day | myday | work | week | patterns | playbook | me`).
-  Bottom tabs: Today, My day, Work, Week (Plan / Insights / Playbook switch), Me.
+  Bottom tabs (4): Today, My day (= the work space: `WorkView`; tab `work` is an alias), Week (Plan / Insights / Playbook switch), Me.
+  The "what really happened" timeline has no screen any more (owner: it's data for patterns / AI, not for the user);
+  WYD, block logs and manual entries (`EntrySheet`) still record it.
 - `src/types.ts`: data model (`State`, `Task`, `Routine`, `Rule`, `Note`, `Actual`, `CheckIn`, `FreeItem`, `Project`, `Step`, `Page`, `NotifyPrefs`).
   `PlanFields` (fixed, priority, deadline, difficulty, minDur, noPostpone, essential, desc) on blocks and routines, set in
   `BlockSheet` (Flexible / Fixed up top, the rest behind "More"). `Task.moves` = schedule history (`moveTask` in `lib/actions.ts`).
@@ -41,10 +43,10 @@ Rules for every agent (Claude Code, Codex):
 - `src/usePwa.ts`: install prompt, push subscription, uploads the next 7 days of reminders to `push_queue`.
 - `src/useReminders.ts`: in-app reminders/toasts while the app is open.
 - `src/lib/plan.ts`: `tasksFor` (real tasks + virtual routine instances, ids `rt:<routineId>:<date>`), `materialize`, `cuesFor`, rules.
-- `src/lib/actuals.ts`: "My day" entries (only what really happened): from block outcomes (`syncActuals`),
+- `src/lib/actuals.ts`: activity history (only what really happened; no screen, used by insights): from block outcomes (`syncActuals`),
   the hourly WYD ("What are you doing?", `WydSheet`, `logSpan`, `logSame`, `wydFrom`) and manual entries. No plan-vs-actual view.
 - WYD: `cuesFor` adds kind `wyd` on the hour during `dayHours`; notification buttons "Doing the plan" (`wplan`) / "Same as before" (`wsame`) log quietly.
-- `src/lib/work.ts` + `components/WorkView.tsx` + `components/WorkSheets.tsx`: Work tab (projects, one next step each, steps,
+- `src/lib/work.ts` + `components/WorkView.tsx` + `components/WorkSheets.tsx`: My day tab (projects, one next step each, steps,
   journal (`projectId: "journal"` = general), drafts, goals, quick capture).
 - History ("what really happened") syncs through Supabase `execution_log` (`supabase/history.sql`): `src/useHistory.ts`
   (network, mode blob/table), `src/lib/historySync.ts` + `src/lib/history.ts` (pure, tested). Deletions go through
@@ -64,7 +66,7 @@ Rules for every agent (Claude Code, Codex):
   (`useHidden`, localStorage `recalibrate.hidden`), then "‹ Today ›" day arrows + Reorganize / Fix my day, then the timeline. No week strip (removed).
   Below it on phones: Now / Up next card (✕ hides it for the day; a "Show “Now”" chip brings it back), to-dos,
   reminders, "N of M done" + energy/sleep chips. "Add block" is hidden on phones (the + button does it). Don't add cards above the day.
-- `src/components/`: `DayView` (Today: notice line, timeline, reorganize + tray, Now card, to-dos + due free blocks), `Timeline`, `MyDayView`, `WeekView`,
+- `src/components/`: `DayView` (Today: notice line, timeline, reorganize + tray, Now card, to-dos + due free blocks), `Timeline`, `WeekView`,
   `PatternsView`, `PlaybookView`, `MeView` (routines, day hours, account, phone app, example data), and the sheets
   (`BlockSheet`, `LogSheet`, `WhySheet` (one-tap reason), `MissSheet`/`CheckSheet`, `AskSheet`, `FreeSheet`/`FreeDueSheet`,
   `EntrySheet`, `QuickSheet`, `WelcomeSheet`, `SetupSheet` (+ `lib/pushCheck.ts` "Check notifications"), `AccountSheet`).
@@ -76,7 +78,8 @@ Rules for every agent (Claude Code, Codex):
   every field 16px+ (rule at the end of `index.css`), `overflow-x` clipped. Keep new fields ≥16px; check `scrollWidth` = 390.
 - Ongoing blocks (`Task.ongoing`, no finish time): drawn growing with the clock (`shownDur`), no halfway/end prompts,
   ✓ (`completeTask`) records the real length.
-- Routine instances: editing asks "This day only" vs "Every week"; moving one in Reorganize offers "Every week" in a toast.
+- Routine instances: editing asks "This day only" vs "Every week"; moving one in Reorganize changes that day only, no question
+  (owner: to change the routine, go to Me → Routines).
 - `supabase/schema.sql`, `supabase/push.sql`, `supabase/functions/send-push/index.ts`: server side (run/deployed by the owner in the dashboard).
 
 ## Design rules

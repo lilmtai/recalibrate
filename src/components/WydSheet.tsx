@@ -42,7 +42,7 @@ export function WydSheet({ date, at, from: fromHint, promptKey }: { date: string
   };
 
   return (
-    <Sheet title="What were you doing?" sub={already ? "Already answered (maybe on another device). Logging again adds nothing." : "One tap logs it in My day."} onClose={close}>
+    <Sheet title="What were you doing?" sub={already ? "Already answered (maybe on another device). Logging again adds nothing." : "One tap logs it."} onClose={close}>
       <div className="row" style={{ alignItems: "flex-end" }}>
         <div className="field"><label htmlFor="w-from">From</label><input id="w-from" type="time" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
         <div className="field"><label htmlFor="w-to">To</label><input id="w-to" type="time" value={to} min={from} onChange={(e) => setTo(e.target.value)} /></div>

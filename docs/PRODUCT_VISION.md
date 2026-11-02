@@ -34,12 +34,13 @@ reality, learns why it exists, and helps you shrink it.
 - **Privacy first.** Execution history is private, synced only to your own account, and deletable.
 
 ## Owner decisions already made in use (they refine the spec)
-- **"My day" shows only what really happened.** The owner asked to remove the side-by-side plan vs. real timeline.
+- **"What really happened" is data, not a screen.** It's recorded (WYD, block logs) for insights and AI; the owner
+  removed its timeline. **My day** is the work space: projects, next steps, notes, journal, drafts, goals.
   Plan-vs-actual comparison still matters, but it lives in **analytics** (Insights, weekly review), not as a second timeline.
   The data model keeps both (scheduled blocks + execution logs), so nothing is lost.
 - **Hourly "What are you doing?" (WYD)** is the main way real days get logged.
 - **Logging a reason is optional and one tap.** Details come after, never required.
-- **Work tab** for projects, next steps, journal, drafts and goals is part of the product.
+- **My day tab** (formerly Work) for projects, next steps, journal, drafts and goals is part of the product.
 - **Look:** simple and calm: neutral greys, black / white, one blue accent; see `UX_PRINCIPLES.md`.
 
 ## How we know it works

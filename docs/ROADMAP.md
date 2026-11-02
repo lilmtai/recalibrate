@@ -104,7 +104,7 @@ and acceptance criteria (AC). An item is done when every AC is met, tests pass, 
 (active days per week, no streaks), recovery acceptance and success rates.
 
 **I-2 · Weekly review**: a guided 5-minute review: wins, top barriers, plan vs reality per area, one
-experiment to try. Plan-vs-actual comparison lives here (owner removed it from My day).
+experiment to try. Plan-vs-actual comparison lives here (the owner removed the "what happened" timeline from the app).
 
 **I-3 · AI layer** (AI-1…AI-5): Edge Function + Claude API; task decomposition first, then recovery
 explanations, duration estimates and weekly insights, all as proposals (`AI_BEHAVIOUR.md`).

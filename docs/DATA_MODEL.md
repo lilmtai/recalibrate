@@ -17,7 +17,7 @@ synced as **one JSON row per user** (`planner_state`) in Supabase. Arrays are me
 | `Actual` | "What really happened" stretch (from block outcomes, WYD, manual) | **ExecutionLog / CheckIn** |
 | `CheckIn` | Daily energy + sleep | User context on a day |
 | `Rule` | If-then fix from a miss, with reminder and win/fail score | Early **Experiment** |
-| `Project`, `Step`, `Page` | Work tab: projects, steps, journal / drafts / goals | (beyond spec) Project, Subtask, Note |
+| `Project`, `Step`, `Page` | My day tab: projects, steps, journal / drafts / goals | (beyond spec) Project, Subtask, Note |
 | `NotifyPrefs`, `dayHours` | Preferences | User |
 | — | — | **Distraction**, **AIRecommendation**: *not modelled yet* |
 
