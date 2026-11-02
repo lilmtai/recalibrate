@@ -14,6 +14,7 @@ export type SheetState =
   | { type: "freedue"; id: string }
   | { type: "wyd"; date: string; at?: number; from?: number; promptKey?: string }
   | { type: "review" }
+  | { type: "voice"; date: string }
   | { type: "recover"; date: string; mode?: "fix" | "minimum" | "shorten" | "postpone" }
   | { type: "capacity"; date: string }
   | { type: "categories" }
@@ -31,7 +32,7 @@ export type SheetState =
 export type ToastAction = { label: string; run: () => void };
 
 /** Screens. Bottom tabs group them: Today = day + myday, Insights = patterns + playbook. */
-export type Tab = "day" | "myday" | "work" | "week" | "patterns" | "playbook" | "me";
+export type Tab = "day" | "myday" | "work" | "week" | "patterns" | "playbook" | "me" | "history";
 
 export interface AppCtx {
   state: State;

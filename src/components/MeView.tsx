@@ -2,7 +2,8 @@ import { useApp } from "../ctx";
 import type { SyncStatus } from "../sync";
 import { loadExample } from "../example";
 import { categoriesOf } from "../constants";
-import { dropActuals } from "../lib/actuals";
+import { actualsFor, dropActuals } from "../lib/actuals";
+import { fmtDur, today } from "../lib/time";
 import { STATUS_LABEL } from "./AccountSheet";
 import type { HistoryMode } from "../useHistory";
 import { RoutinesView } from "./RoutinesView";
@@ -12,7 +13,9 @@ import { getTheme, setTheme, type Theme } from "../lib/theme";
 
 /** Me: routines, your day hours, account and sync, phone app and notifications, example data. */
 export function MeView({ sync, pushOn, installed, historyMode }: { sync: { email: string | null; status: SyncStatus }; pushOn: boolean; installed: boolean; historyMode: HistoryMode }) {
-  const { state, update, open, toast } = useApp();
+  const { state, update, open, toast, setTab, now } = useApp();
+  const todayLog = actualsFor(state, today());
+  const loggedMin = todayLog.reduce((x, a) => x + Math.max(0, (a.end ?? now) - a.start), 0);
   const hours = state.dayHours || { start: "07:00", end: "23:00" };
   const [theme, setThemeState] = useState<Theme>(getTheme);
   const pickTheme = (t: Theme) => { setTheme(t); setThemeState(t); };
@@ -39,6 +42,12 @@ export function MeView({ sync, pushOn, installed, historyMode }: { sync: { email
       <section>
         <RoutinesView />
       </section>
+
+      <div className="card mecard">
+        <span className="ic"><Icon name="clock" /></span>
+        <div className="grow"><b>Your log</b><span className="small muted">What really happened{todayLog.length ? ` · ${fmtDur(loggedMin)} logged today` : " · nothing logged today yet"}</span></div>
+        <button className="btn" onClick={() => setTab("history")}>Open</button>
+      </div>
 
       <div className="card mecard">
         <span className="ic"><Icon name="sun" /></span>

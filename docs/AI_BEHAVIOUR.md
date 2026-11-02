@@ -1,7 +1,7 @@
 # AI behaviour
 
 AI is an **advisor, not a boss**. It is built into the workflow (planning, recovery, weekly review),
-not a chatbot in a corner. No AI is in the app today; this file governs everything AI added later.
+not a chatbot in a corner. This file governs every AI feature. Built so far: the **voice / text day log** (below).
 
 ## Where it runs
 - Calls go through a **Supabase Edge Function** (server side) using the Claude API. The API key never
@@ -30,6 +30,19 @@ not a chatbot in a corner. No AI is in the app today; this file governs everythi
 5. The proposal and the decision are stored (`ai_recommendation`), approved or not.
 
 Never rely on the language model for calendar arithmetic (durations, overlaps, time zones).
+
+## Built: "Tell me about your day" (voice / text day log)
+- Where: + menu → "Tell me about your day", and Me → Your log → "Tell it". Speech-to-text is the phone's own
+  (keyboard mic, or the browser's speech recognition where available); only the text is sent.
+- Server: Edge Function `supabase/functions/log-day/index.ts` (signed-in users only; secret `ANTHROPIC_API_KEY`).
+  Claude (`claude-opus-5-5`, effort low, structured output with a JSON schema, refusal fallback on) gets the text,
+  the day's plan (ids, titles, times, status), and the category / reason / instead key lists. It returns blocks
+  (done / partly / missed / "if not", minutes, reason), other entries with times, energy, sleep, to-dos and a
+  one-line summary.
+- App: `lib/voice.ts` (pure, tested) checks every item against the real plan and lists (unknown ids, keys or
+  times are dropped, blocks already logged are never overwritten), shows a tick list, and saves only what the
+  user approves (`applyVoice`, same rules as the log panel).
+- Not stored yet: the proposal itself (`ai_recommendation`) — add with the AI settings switch.
 
 ## Capabilities (in build order)
 | Capability | Trigger | Output |

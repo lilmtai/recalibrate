@@ -123,3 +123,21 @@ describe("ongoing blocks (no finish time)", () => {
     expect(tasksFor(s, TODAY)[0]).toMatchObject({ ongoing: true, emoji: "🧹" });
   });
 });
+
+describe("WYD isn't asked again for an hour that's already logged", () => {
+  const wyd = (s: ReturnType<typeof state>) => cuesFor(s, TODAY).filter((c) => c.kind === "wyd").map((c) => c.at);
+  it("skips hours covered 45+ min by entries (answers, voice logs, done blocks); overlaps count once", async () => {
+    const { loggedMinutes } = await import("./plan");
+    expect(loggedMinutes([{ start: 600, end: 640 }, { start: 620, end: 660 }], 600, 660)).toBe(60);
+    expect(loggedMinutes([{ start: 500, end: 610 }], 600, 660)).toBe(10);
+    expect(loggedMinutes([{ start: 590 }], 600, 660)).toBe(60); // running entry
+    const base = state();
+    expect(wyd(base)).toContain(11 * 60);
+    const s = state({ actuals: [
+      { id: "a", date: TODAY, start: 600, end: 650, title: "Gym", kind: "plan" },
+      { id: "b", date: TODAY, start: 720, end: 740, title: "Phone", kind: "free" },
+    ] });
+    expect(wyd(s)).not.toContain(11 * 60); // 10:00–11:00 logged 50 min
+    expect(wyd(s)).toContain(13 * 60); // 12:00–13:00 only 20 min
+  });
+});

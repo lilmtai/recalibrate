@@ -12,6 +12,8 @@ import { PageSheet, ProjectSheet } from "./components/WorkSheets";
 import { WydSheet } from "./components/WydSheet";
 import { ReviewSheet } from "./components/ReviewSheet";
 import { CapacitySheet, RecoverSheet } from "./components/RecoverSheet";
+import { VoiceSheet } from "./components/VoiceSheet";
+import { HistoryView } from "./components/HistoryView";
 import { CategorySheet } from "./components/CategorySheet";
 import { categoriesOf } from "./constants";
 import { EntrySheet } from "./components/EntrySheet";
@@ -47,7 +49,7 @@ const GROUPS: { key: Group; label: string; icon: Parameters<typeof Icon>[0]["nam
 ];
 const groupOf = (t: Tab): Group =>
   t === "day" ? "today" : t === "myday" || t === "work" ? "myday" : t === "week" || t === "patterns" || t === "playbook" ? "week" : "me";
-const VALID: Tab[] = ["day", "myday", "work", "week", "patterns", "playbook", "me"];
+const VALID: Tab[] = ["day", "myday", "work", "week", "patterns", "playbook", "me", "history"];
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -231,6 +233,7 @@ export default function App() {
     group === "today" ? [dayLabel, isToday ? greeting() : parseKey(date).toLocaleDateString(undefined, { weekday: "long" })]
     : group === "myday" ? ["Work, notes, journal, goals", "My day"]
     : group === "week" ? (tab === "week" ? ["Plan ahead", "Your week"] : ["Last 14 days", "Insights"])
+    : tab === "history" ? [dayLabel, "Your log"]
     : [sync.email || "Settings and routines", "Me"];
   const initial = (sync.email || "R")[0].toUpperCase();
 
@@ -266,6 +269,7 @@ export default function App() {
         <main key={tab} className="view">
           {tab === "day" && <DayView notificationsOn={push.subscribed} />}
           {(tab === "myday" || tab === "work") && <WorkView />}
+          {tab === "history" && <HistoryView />}
           {tab === "week" && <WeekView />}
           {tab === "patterns" && <PatternsView />}
           {tab === "playbook" && <PlaybookView />}
@@ -292,6 +296,7 @@ export default function App() {
       {sheet?.type === "free" && <FreeSheet key={sheet.item?.id || "new"} item={sheet.item} />}
       {sheet?.type === "freedue" && <FreeDueSheet id={sheet.id} />}
       {sheet?.type === "review" && <ReviewSheet />}
+      {sheet?.type === "voice" && <VoiceSheet key={sheet.date} date={sheet.date} />}
       {sheet?.type === "capacity" && <CapacitySheet date={sheet.date} />}
       {sheet?.type === "recover" && <RecoverSheet key={sheet.date + (sheet.mode || "")} date={sheet.date} mode={sheet.mode} />}
       {sheet?.type === "categories" && <CategorySheet />}

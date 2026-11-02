@@ -81,6 +81,21 @@ export function remindLabel(r: Remind) {
 }
 
 /** Everything that should nudge you on `date`: fix reminders and 5-minute transition warnings. */
+/** Minutes of [from, to) covered by logged entries (a running one counts for up to 3 hours). */
+export function loggedMinutes(entries: { start: number; end?: number }[], from: number, to: number): number {
+  const spans = entries
+    .map((e) => [Math.max(from, e.start), Math.min(to, e.end ?? e.start + 180)] as const)
+    .filter(([a, b]) => b > a)
+    .sort((x, y) => x[0] - y[0]);
+  let total = 0;
+  let cur = from;
+  for (const [a, b] of spans) {
+    const s0 = Math.max(a, cur);
+    if (b > s0) { total += b - s0; cur = b; }
+  }
+  return total;
+}
+
 export function cuesFor(s: State, date: string): Cue[] {
   const out: Cue[] = [];
   const add = (t: Task, r: Rule, at: number, tomorrow: boolean) =>
@@ -122,8 +137,11 @@ export function cuesFor(s: State, date: string): Cue[] {
   // "What are you doing?" on the hour while you're awake, skipped when a block prompt is already near
   const hrs = s.dayHours || { start: "07:00", end: "23:00" };
   const day = tasksFor(s, date);
+  const logged = (s.actuals || []).filter((x) => x.date === date);
   for (let at = (Math.floor(toMin(hrs.start) / 60) + 1) * 60; at <= toMin(hrs.end); at += 60) {
     if (out.some((c) => c.kind !== "fix" && c.kind !== "free" && Math.abs(c.at - at) <= 10)) continue;
+    // already logged (a done block, an answer, a voice log): don't ask about that hour again
+    if (loggedMinutes(logged, at - 60, at) >= 45) continue;
     if (f && at >= focusFrom && at <= focusTo + 5) continue;
     const planned = day.find((t) => toMin(t.start) <= at - 1 && at - 1 < toMin(t.start) + t.dur);
     out.push({

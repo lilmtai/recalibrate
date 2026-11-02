@@ -29,7 +29,8 @@ Rules for every agent (Claude Code, Codex):
 - `src/ctx.ts`: app context + `SheetState` union (every pop-up panel) + `Tab` (`day | myday | work | week | patterns | playbook | me`).
   Bottom tabs (4): Today, My day (= the work space: `WorkView`; tab `work` is an alias), Week (Plan / Insights / Playbook switch), Me.
   The "what really happened" timeline has no screen any more (owner: it's data for patterns / AI, not for the user);
-  WYD, block logs and manual entries (`EntrySheet`) still record it.
+  WYD, block logs, manual entries (`EntrySheet`) and voice logs still record it. It is viewable in **Me → Your log**
+  (tab `history`, `components/HistoryView.tsx`, a small card in Me opens it).
 - `src/types.ts`: data model (`State`, `Task`, `Routine`, `Rule`, `Note`, `Actual`, `CheckIn`, `FreeItem`, `Project`, `Step`, `Page`, `NotifyPrefs`).
   `PlanFields` (fixed, priority, deadline, difficulty, minDur, noPostpone, essential, desc) on blocks and routines, set in
   `BlockSheet` (Flexible / Fixed up top, the rest behind "More"). `Task.moves` = schedule history (`moveTask` in `lib/actions.ts`).
@@ -56,6 +57,10 @@ Rules for every agent (Claude Code, Codex):
   during focus `cuesFor` adds a `focus` "time's up" cue and silences that block's prompts and hourly WYD.
 - Blocks record `startedAt` / `endedAt` (`markStarted` / `markEnded` in `lib/actions.ts`); `startState()` tells
   never-started from started-unfinished. Old unfinished to-dos never roll over: `notesToReview` + `ReviewSheet`.
+- Voice / text day log ("Tell me about your day", + menu and Your log): `components/VoiceSheet.tsx` → Edge Function
+  `supabase/functions/log-day/index.ts` (Claude `claude-opus-5-5`, structured output) → `lib/voice.ts` (pure, tested:
+  `buildVoiceRequest`, `parseVoiceResult` validates against the real plan, `applyVoice` saves only approved items).
+  See `docs/AI_BEHAVIOUR.md`. WYD skips an hour already logged 45+ min (`loggedMinutes` in `lib/plan.ts`).
 - `src/lib/answers.ts`: applies one-tap notification answers saved by the service worker (`recalibrate-pending` cache).
 - `src/lib/stats.ts`, `src/lib/push.ts`, `src/lib/time.ts`, `src/constants.ts`, `src/example.ts` (example week, flagged `ex`).
 - Free blocks (`FreeItem` in `state.free`): no set time, repeat every N days, show as due in the to-do card,
@@ -102,6 +107,9 @@ Rules for every agent (Claude Code, Codex):
 - `push.sql` + `send-push` function + secrets: done; the test notification arrives on the owner's iPhone.
   If reminders don't arrive, run Me → Phone app & notifications → Check notifications (it uploads and lists the schedule).
   The VAPID private key and cron secret are NOT in the repo; only the public key is (`src/lib/push.ts`).
+- `log-day` function + `ANTHROPIC_API_KEY` secret: **to do by the owner** (voice log shows a clear message until then).
+  Deploy from the dashboard (Edge Functions → Deploy new → name `log-day`, paste `supabase/functions/log-day/index.ts`,
+  Verify JWT ON), then Edge Functions → Secrets → `ANTHROPIC_API_KEY` (from console.anthropic.com).
 - Email templates can't be edited without custom SMTP, so the emailed code isn't sent. Sign-in uses email + password instead.
   Recommended: Authentication → Sign In / Providers → Email → turn OFF "Confirm email" (or set up SMTP: Gmail app password or Resend).
 

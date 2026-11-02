@@ -31,8 +31,8 @@ Backlog items in `ROADMAP.md` reference these IDs.
 | TA-5 | Actual start and finish timestamps | Done | `Task.startedAt` / `endedAt`, set by "I'm on it", the Now card, notification answers, WYD "I did", "now doing", and logging an outcome. A dedicated Start button comes with EX-2. |
 | TA-6 | Estimated vs actual duration | Done | Actual-time chips → time multiplier, per-block estimates in Insights. |
 | TA-7 | Optional overtime confirmation | Done | Focus mode: "Time's up. Need more time?" +10 / +30 / Done; extensions counted (`Task.extendedMin`). |
-| TA-8 | Automatic recording of unplanned activity | Partial | Logged via WYD / quick log, but only when the user answers. Kept as data for insights (no screen). |
-| TA-9 | Notification modes: strict / adaptive / minimal | Missing | Per-type on/off switches exist (`NotifyPrefs`). |
+| TA-8 | Automatic recording of unplanned activity | Partial | Logged via WYD, quick log, or a spoken / typed day log that Claude turns into entries (approved by the user). Kept as data for insights; viewable in Me → Your log. |
+| TA-9 | Notification modes: strict / adaptive / minimal | Partial | Per-type on/off switches (`NotifyPrefs`). Already adaptive: done blocks lose their halfway / end prompts, and the hourly WYD skips any hour already logged 45+ min (`loggedMinutes` in `cuesFor`). No mode switch yet. |
 
 ## Module 3 · Task execution and starting (P0)
 
@@ -98,6 +98,7 @@ Backlog items in `ROADMAP.md` reference these IDs.
 | AI-6 | Weekly planning | Missing |
 | AI-7 | Recurring-task scheduling options | Missing |
 | AI-8 | Natural-language planning assistant | Missing |
+| AI-9 | Spoken / typed day log → structured log (owner request) | Done (needs `ANTHROPIC_API_KEY` + `log-day` deployed) |
 
 Rules for all AI work: `AI_BEHAVIOUR.md`.
 
