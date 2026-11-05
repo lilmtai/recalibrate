@@ -773,3 +773,29 @@ input, select, textarea { font-size: 16px !important; }
 #voice-text { min-height: 150px; resize: vertical; line-height: 1.45; }
 .voicetimes { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .voicetimes input[type="time"] { padding: 5px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); flex: 0 1 140px; min-width: 0; }
+
+/* assistant */
+.askbtn { flex: none; width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--gold-text); display: grid; place-items: center; padding: 0; }
+.askbtn:hover { border-color: var(--gold); }
+.chat { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; min-height: 120px; }
+.chatstart { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.chatstart .pick { text-align: left; }
+.msg { display: flex; flex-direction: column; gap: 6px; }
+.msg.user { align-items: flex-end; }
+.bubble { max-width: 88%; padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.user .bubble { background: var(--accent); color: var(--accent-fg); border-bottom-right-radius: 6px; }
+.msg.assistant .bubble { background: var(--sunk); color: var(--fg); border-bottom-left-radius: 6px; }
+.sugg { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); border-left: 4px solid var(--c, var(--gold)); }
+.sugg .rtitle { font-weight: 700; }
+.sugg .btn { flex: none; display: inline-flex; align-items: center; gap: 4px; }
+.sugg.done { opacity: .7; }
+.typing { display: inline-flex; gap: 4px; align-items: center; }
+.typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+@media (prefers-reduced-motion: no-preference) {
+  .typing i { animation: blink 1.2s infinite ease-in-out; }
+  .typing i:nth-child(2) { animation-delay: .2s; }
+  .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 50% { opacity: .25; } }
+}
+.chatinput { position: sticky; bottom: -1px; display: flex; gap: 8px; align-items: flex-end; margin-top: 12px; padding: 8px 0 calc(4px + env(safe-area-inset-bottom, 0px)); background: var(--surface); }
+.chatinput textarea { flex: 1; min-width: 0; resize: none; max-height: 120px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 20px; background: var(--bg); line-height: 1.35; }

@@ -1,23 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useApp } from "../ctx";
 import { BARRIER_LABEL, INSTEAD_LABEL, catLabel } from "../constants";
-import { supabase } from "../lib/supabase";
+import { AI_ERRORS, callAi } from "../lib/ai";
 import { applyVoice, buildVoiceRequest, parseVoiceResult, type VoiceItem, type VoiceProposal } from "../lib/voice";
 import { fmt, longDate, toMin, today } from "../lib/time";
 import { Sheet } from "./Sheet";
 import { Icon } from "./Icon";
 
-const ERRORS: Record<string, string> = {
-  missing_key: "Voice logging isn't switched on yet: the Claude API key still has to be added in Supabase.",
-  bad_key: "The Claude API key in Supabase isn't working. Check it in the Anthropic console and paste it again.",
-  signin: "Sign in first (Me → Account & sync), so your log stays private.",
-  refused: "Couldn't turn that into a log. Try saying it a bit differently.",
-  bad_output: "Couldn't turn that into a log. Try again.",
-  too_long: "That was a lot! Try a shorter version.",
-  busy: "Busy right now. Try again in a minute.",
-  empty: "Say or type something first.",
-};
+const ERRORS = AI_ERRORS;
 
 const STATUS: Record<string, string> = { done: "done", partial: "partly done", missed: "didn't happen", ifnot: "“if not” version" };
 
@@ -68,19 +58,10 @@ export function VoiceSheet({ date }: { date: string }) {
     rec.current?.stop();
     setError("");
     if (!text.trim()) return setError(ERRORS.empty);
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session) return setError(ERRORS.signin);
     setPhase("thinking");
-    const { data, error: err } = await supabase.functions.invoke("log-day", { body: buildVoiceRequest(state, date, text, isToday ? now : null) });
-    if (err) {
-      let code = "";
-      if (err instanceof FunctionsHttpError) {
-        if (err.context?.status === 404) code = "not_deployed";
-        else { try { code = (await err.context.json())?.error || ""; } catch { /* not JSON */ } }
-      }
-      setPhase("write");
-      return setError(code === "not_deployed" ? "The “log-day” function isn't in Supabase yet (see the setup steps)." : ERRORS[code] || "Couldn't reach the server. Check your connection and try again.");
-    }
+    const res = await callAi<{ result: unknown }>("log-day", buildVoiceRequest(state, date, text, isToday ? now : null));
+    if ("error" in res) { setPhase("write"); return setError(res.error); }
+    const data = res.data;
     const p = parseVoiceResult(data?.result, state, date, isToday ? now : 18 * 60);
     setProposal(p);
     setOff(new Set());

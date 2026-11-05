@@ -1,7 +1,7 @@
 # AI behaviour
 
 AI is an **advisor, not a boss**. It is built into the workflow (planning, recovery, weekly review),
-not a chatbot in a corner. This file governs every AI feature. Built so far: the **voice / text day log** (below).
+not a chatbot in a corner. This file governs every AI feature. Built so far: the **voice / text day log** and the **assistant** (below).
 
 ## Where it runs
 - Calls go through a **Supabase Edge Function** (server side) using the Claude API. The API key never
@@ -44,6 +44,20 @@ Never rely on the language model for calendar arithmetic (durations, overlaps, t
   estimated in the order told, working back from now, marked "estimated" and editable on the review screen), shows a tick list, and saves only what the
   user approves (`applyVoice`, same rules as the log panel).
 - Not stored yet: the proposal itself (`ai_recommendation`) — add with the AI settings switch.
+
+## Built: the assistant (chat)
+- Where: the sparkle button next to the avatar (every tab) and + → "Ask the assistant". `components/AssistantSheet.tsx`;
+  the chat is kept on the device for the day.
+- Server: Edge Function `supabase/functions/assistant/index.ts` (signed-in users; same `ANTHROPIC_API_KEY`). Claude
+  (`claude-opus-5-5`, effort medium, structured output) gets the last 12 turns plus a compact picture built by the app
+  (`lib/assistant.ts → buildAssistantContext`): the next 7 days with blocks and **free slots computed by the app**,
+  capacity, routines, to-dos, due repeating items, active projects (next step, open steps, goals, latest notes),
+  goals, recent journal, and history (follow-through, top reasons, where time went, time multiplier, completion by
+  part of day, the last 7 days logged). It answers in plain text and may return suggestions (add a block / move a
+  flexible block).
+- Checks (`checkSuggestions`, tested): suggestions are validated together against the real schedule; anything in the
+  past, beyond the next 7 days, overlapping, or touching fixed / logged blocks is dropped ("I left out N…").
+  Each remaining one is a card with Add / Move; `applySuggestion` re-checks on tap and records moves with source "ai".
 
 ## Capabilities (in build order)
 | Capability | Trigger | Output |

@@ -10,7 +10,7 @@ synced as **one JSON row per user** (`planner_state`) in Supabase. Arrays are me
 | --- | --- | --- |
 | `Task` | A scheduled block on a date (time, duration, category, energy, "if not", outcome, reason, what-instead, check-ins, actual minutes, plan fields, `moves`) | **Task + ScheduleBlock + part of ExecutionLog**, all in one record |
 | `PlanFields` (on `Task` and `Routine`) | `fixed`, `priority`, `deadline`, `difficulty`, `minDur`, `noPostpone`, `essential`, `desc`; all optional, empty = default | Task fields (kind, priority, deadline, …) |
-| `Task.moves` (`Move[]`) | Every change to a block's time: from → to, length, other day, source user / recovery, when | **schedule_change** (local for now) |
+| `Task.moves` (`Move[]`) | Every change to a block's time: from → to, length, other day, source user / recovery / ai, when | **schedule_change** (local for now) |
 | `Routine` | Weekly repeating block; instances are *virtual* until touched (`tasksFor`, ids `rt:<routineId>:<date>`) | Task + **RecurrenceRule** |
 | `FreeItem` | Floating task that repeats every N days, with next due and reminder time | Floating Task + RecurrenceRule |
 | `Note` | Post-it to-do with no time | Floating Task (and today, also the distraction inbox) |

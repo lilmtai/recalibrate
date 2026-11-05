@@ -13,6 +13,7 @@ import { WydSheet } from "./components/WydSheet";
 import { ReviewSheet } from "./components/ReviewSheet";
 import { CapacitySheet, RecoverSheet } from "./components/RecoverSheet";
 import { VoiceSheet } from "./components/VoiceSheet";
+import { AssistantSheet } from "./components/AssistantSheet";
 import { HistoryView } from "./components/HistoryView";
 import { CategorySheet } from "./components/CategorySheet";
 import { categoriesOf } from "./constants";
@@ -258,6 +259,7 @@ export default function App() {
                 <button key={g.key} role="tab" aria-selected={group === g.key} onClick={() => setTab(lastIn.current[g.key] || g.first)}>{g.label}</button>
               ))}
             </nav>
+            <button className="askbtn" onClick={() => setSheet({ type: "assistant" })} aria-label="Ask the assistant"><Icon name="sparkle" size={20} /></button>
             <button className="avatar" onClick={() => setTab("me")} aria-label={`Me: ${sync.email ? "signed in" : "not signed in"}`}>
               {initial}<span className={`dot s-${sync.status}`} />
             </button>
@@ -296,6 +298,7 @@ export default function App() {
       {sheet?.type === "free" && <FreeSheet key={sheet.item?.id || "new"} item={sheet.item} />}
       {sheet?.type === "freedue" && <FreeDueSheet id={sheet.id} />}
       {sheet?.type === "review" && <ReviewSheet />}
+      {sheet?.type === "assistant" && <AssistantSheet />}
       {sheet?.type === "voice" && <VoiceSheet key={sheet.date} date={sheet.date} />}
       {sheet?.type === "capacity" && <CapacitySheet date={sheet.date} />}
       {sheet?.type === "recover" && <RecoverSheet key={sheet.date + (sheet.mode || "")} date={sheet.date} mode={sheet.mode} />}

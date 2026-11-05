@@ -96,8 +96,8 @@ Backlog items in `ROADMAP.md` reference these IDs.
 | AI-4 | Duration estimation | Partial (deterministic multiplier exists) |
 | AI-5 | Weekly pattern insights | Missing (deterministic insights exist) |
 | AI-6 | Weekly planning | Missing |
-| AI-7 | Recurring-task scheduling options | Missing |
-| AI-8 | Natural-language planning assistant | Missing |
+| AI-7 | Recurring-task scheduling options | Partial (ask the assistant "when fits…") |
+| AI-8 | Natural-language planning assistant | Done (needs `assistant` deployed): chat that finds times, fits new blocks (moving flexible ones), plans work time from projects and goals; suggestions are checked and tapped to apply |
 | AI-9 | Spoken / typed day log → structured log (owner request) | Done (needs `ANTHROPIC_API_KEY` + `log-day` deployed) |
 
 Rules for all AI work: `AI_BEHAVIOUR.md`.

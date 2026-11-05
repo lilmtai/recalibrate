@@ -15,6 +15,7 @@ export type SheetState =
   | { type: "wyd"; date: string; at?: number; from?: number; promptKey?: string }
   | { type: "review" }
   | { type: "voice"; date: string }
+  | { type: "assistant" }
   | { type: "recover"; date: string; mode?: "fix" | "minimum" | "shorten" | "postpone" }
   | { type: "capacity"; date: string }
   | { type: "categories" }

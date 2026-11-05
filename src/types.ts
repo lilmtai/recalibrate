@@ -74,7 +74,7 @@ export interface Move {
   toDur?: number;
   /** moved to another day */
   toDate?: string;
-  source: "user" | "recovery";
+  source: "user" | "recovery" | "ai";
 }
 
 export interface Task extends PlanFields {

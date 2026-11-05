@@ -18,6 +18,7 @@ export function QuickSheet() {
   };
   const n = nowMin();
   const opts: { icon: IconName; title: string; sub: string; run: () => void }[] = [
+    { icon: "sparkle", title: "Ask the assistant", sub: "When does it fit? What should I work on?", run: () => open({ type: "assistant" }) },
     { icon: "mic", title: "Tell me about your day", sub: "Talk or type it; I turn it into your log", run: () => open({ type: "voice", date: today() }) },
     { icon: "block", title: "Plan a block", sub: "Something with a time slot", run: () => open({ type: "block", date }) },
     { icon: "play", title: "What I'm doing right now", sub: "Log it in one tap", run: () => open({ type: "wyd", date: today() }) },

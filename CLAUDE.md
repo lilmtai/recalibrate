@@ -61,6 +61,10 @@ Rules for every agent (Claude Code, Codex):
   `supabase/functions/log-day/index.ts` (Claude `claude-opus-5-5`, structured output) → `lib/voice.ts` (pure, tested:
   `buildVoiceRequest`, `parseVoiceResult` validates against the real plan, `applyVoice` saves only approved items).
   See `docs/AI_BEHAVIOUR.md`. WYD skips an hour already logged 45+ min (`loggedMinutes` in `lib/plan.ts`).
+- Assistant (chat): sparkle button in the header + "Ask the assistant" in the + menu → `components/AssistantSheet.tsx` →
+  Edge Function `supabase/functions/assistant/index.ts` → `lib/assistant.ts` (pure, tested: `buildAssistantContext` with
+  app-computed free slots, `checkSuggestions` validates add / move suggestions, `applySuggestion` on tap). `lib/ai.ts`:
+  `callAi` + plain-language errors, shared by voice log and assistant.
 - `src/lib/answers.ts`: applies one-tap notification answers saved by the service worker (`recalibrate-pending` cache).
 - `src/lib/stats.ts`, `src/lib/push.ts`, `src/lib/time.ts`, `src/constants.ts`, `src/example.ts` (example week, flagged `ex`).
 - Free blocks (`FreeItem` in `state.free`): no set time, repeat every N days, show as due in the to-do card,
@@ -107,9 +111,9 @@ Rules for every agent (Claude Code, Codex):
 - `push.sql` + `send-push` function + secrets: done; the test notification arrives on the owner's iPhone.
   If reminders don't arrive, run Me → Phone app & notifications → Check notifications (it uploads and lists the schedule).
   The VAPID private key and cron secret are NOT in the repo; only the public key is (`src/lib/push.ts`).
-- `log-day` function + `ANTHROPIC_API_KEY` secret: **to do by the owner** (voice log shows a clear message until then).
-  Deploy from the dashboard (Edge Functions → Deploy new → name `log-day`, paste `supabase/functions/log-day/index.ts`,
-  Verify JWT ON), then Edge Functions → Secrets → `ANTHROPIC_API_KEY` (from console.anthropic.com).
+- `log-day` function + `ANTHROPIC_API_KEY` secret: done (voice log works). Redeploy after changing its code.
+- `assistant` function: **to do by the owner**: dashboard → Edge Functions → Deploy new → Via Editor, name exactly
+  `assistant`, paste `supabase/functions/assistant/index.ts`, Verify JWT ON. Uses the same `ANTHROPIC_API_KEY`.
 - Email templates can't be edited without custom SMTP, so the emailed code isn't sent. Sign-in uses email + password instead.
   Recommended: Authentication → Sign In / Providers → Email → turn OFF "Confirm email" (or set up SMTP: Gmail app password or Resend).
 
