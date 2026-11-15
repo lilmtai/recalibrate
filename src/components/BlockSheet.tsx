@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useApp } from "../ctx";
 import { categoriesOf, ENERGY_LABEL } from "../constants";
 import type { CategoryKey, Difficulty, Energy, Priority, Routine, Task } from "../types";
-import { DAY_SHORT, fmt, longDate, nowMin, toMin, today, uid, weekday } from "../lib/time";
+import { addDays, DAY_SHORT, fmt, longDate, nowMin, parseKey, toMin, today, uid, weekday } from "../lib/time";
 import { materialize } from "../lib/plan";
 import { moveTask } from "../lib/actions";
 import { EMOJI_PICKS, suggestEmoji } from "../lib/emoji";
@@ -16,6 +16,17 @@ const PRIORITY_OPTS: { key: Priority; label: string }[] = [
 const DIFF_OPTS: { key: Difficulty | "none"; label: string }[] = [
   { key: "none", label: "Not set" }, { key: "easy", label: "Easy" }, { key: "medium", label: "Medium" }, { key: "hard", label: "Hard" },
 ];
+
+/** "First one: today" / "First one: Mon 16 Nov", so a routine that starts next week doesn't look missing. */
+function firstLabel(since: string, days: number[]): string {
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(since, i);
+    if (days.includes(weekday(d))) {
+      return `First one: ${d === today() ? "today" : parseKey(d).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}.`;
+    }
+  }
+  return "";
+}
 
 const ENERGY_OPTS: { key: Energy | "none"; label: string }[] = [
   { key: "none", label: "Not set" },
@@ -127,7 +138,7 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
       }
       if (fromNote) s.notes = s.notes.filter((n) => n.id !== fromNote);
     });
-    toast(isRoutine && !task ? (routine ? "Routine updated." : `Routine added: ${days.map((x) => DAY_SHORT[x]).join(", ")}, every week.`)
+    toast(isRoutine && !task ? (routine ? "Routine updated." : `Routine added: ${days.map((x) => DAY_SHORT[x]).join(", ")}, every week. ${firstLabel(date || today(), days)}`)
       : everyWeek ? "Saved for every week." : inRoutineInstance ? "Saved for this day only." : "Saved.");
     close();
   }
