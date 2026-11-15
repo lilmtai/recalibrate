@@ -16,6 +16,7 @@ export type SheetState =
   | { type: "review" }
   | { type: "voice"; date: string }
   | { type: "assistant" }
+  | { type: "reset" }
   | { type: "recover"; date: string; mode?: "fix" | "minimum" | "shorten" | "postpone" }
   | { type: "capacity"; date: string }
   | { type: "categories" }

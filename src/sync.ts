@@ -16,6 +16,11 @@ const writeMeta = (m: Meta) => { try { localStorage.setItem(META, JSON.stringify
 
 /** Combine two planners: keep everything from both, newer copy wins when the same item exists twice. */
 export function merge(a: State, b: State): State {
+  // after "Start fresh", a copy that hasn't seen the reset is old data: it must not come back
+  if ((a.resetAt || 0) !== (b.resetAt || 0)) {
+    const fresh = (a.resetAt || 0) > (b.resetAt || 0) ? a : b;
+    return { ...fresh, updatedAt: Date.now() };
+  }
   const [older, newer] = (a.updatedAt || 0) <= (b.updatedAt || 0) ? [a, b] : [b, a];
   const byId = <T extends { id: string }>(x: T[], y: T[]) => {
     const m = new Map<string, T>();
@@ -40,6 +45,8 @@ export function merge(a: State, b: State): State {
     dayHours: newer.dayHours || older.dayHours,
     focus: newer.focus,
     onboarded: newer.onboarded || older.onboarded,
+    categories: newer.categories || older.categories,
+    resetAt: newer.resetAt,
     updatedAt: Date.now(),
   };
 }
@@ -81,6 +88,8 @@ export function useSync(state: State, replace: (s: State) => void) {
   /** History syncs separately once the table is set up; a planner copy without it must not wipe the local log. */
   const withLocalHistory = useCallback((incoming: State): State => {
     const local = stateRef.current;
+    // a reset made on another device: this device's log goes too
+    if ((incoming.resetAt || 0) > (local.resetAt || 0)) return { ...incoming, actuals: incoming.actuals || [], actualTomb: [] };
     const carry = historyInTable() || !(incoming.actuals || []).length;
     return { ...incoming, actuals: carry ? keepHistory(incoming.actuals, local.actuals) : incoming.actuals, actualTomb: local.actualTomb };
   }, []);

@@ -276,6 +276,8 @@ export interface State {
   onboarded?: boolean;
   /** ms timestamp of the last local edit, used for sync */
   updatedAt?: number;
+  /** ms timestamp of the last "Start fresh": copies from before it are ignored when syncing */
+  resetAt?: number;
 }
 
 export interface Cue {

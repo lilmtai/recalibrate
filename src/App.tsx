@@ -14,6 +14,7 @@ import { ReviewSheet } from "./components/ReviewSheet";
 import { CapacitySheet, RecoverSheet } from "./components/RecoverSheet";
 import { VoiceSheet } from "./components/VoiceSheet";
 import { AssistantSheet } from "./components/AssistantSheet";
+import { ResetSheet } from "./components/ResetSheet";
 import { HistoryView } from "./components/HistoryView";
 import { CategorySheet } from "./components/CategorySheet";
 import { categoriesOf } from "./constants";
@@ -299,6 +300,7 @@ export default function App() {
       {sheet?.type === "freedue" && <FreeDueSheet id={sheet.id} />}
       {sheet?.type === "review" && <ReviewSheet />}
       {sheet?.type === "assistant" && <AssistantSheet />}
+      {sheet?.type === "reset" && <ResetSheet />}
       {sheet?.type === "voice" && <VoiceSheet key={sheet.date} date={sheet.date} />}
       {sheet?.type === "capacity" && <CapacitySheet date={sheet.date} />}
       {sheet?.type === "recover" && <RecoverSheet key={sheet.date + (sheet.mode || "")} date={sheet.date} mode={sheet.mode} />}

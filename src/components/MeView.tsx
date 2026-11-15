@@ -104,6 +104,12 @@ export function MeView({ sync, pushOn, installed, historyMode }: { sync: { email
           ? <button className="btn" onClick={clearExamples}>Clear example data</button>
           : <button className="btn" onClick={() => { update(loadExample); toast("Example week loaded."); }}>Load example</button>}
       </div>
+
+      <div className="card mecard">
+        <span className="ic"><Icon name="repeat" /></span>
+        <div className="grow"><b>Start fresh</b><span className="small muted">Clear your plan, log, projects and notes. Settings stay.</span></div>
+        <button className="btn" onClick={() => open({ type: "reset" })}>Start fresh…</button>
+      </div>
     </div>
   );
 }

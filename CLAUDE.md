@@ -65,6 +65,9 @@ Rules for every agent (Claude Code, Codex):
   Edge Function `supabase/functions/assistant/index.ts` → `lib/assistant.ts` (pure, tested: `buildAssistantContext` with
   app-computed free slots, `checkSuggestions` validates add / move suggestions, `applySuggestion` on tap). `lib/ai.ts`:
   `callAi` + plain-language errors, shared by voice log and assistant.
+- Start fresh (Me, last card → `components/ResetSheet.tsx`, `lib/reset.ts`, tested): clears data, keeps settings, optional
+  JSON backup download, soft-deletes the server log; `State.resetAt` makes `sync.merge` ignore any copy from before the
+  reset so another device can't bring old data back. `merge` keeps `categories` too.
 - `src/lib/answers.ts`: applies one-tap notification answers saved by the service worker (`recalibrate-pending` cache).
 - `src/lib/stats.ts`, `src/lib/push.ts`, `src/lib/time.ts`, `src/constants.ts`, `src/example.ts` (example week, flagged `ex`).
 - Free blocks (`FreeItem` in `state.free`): no set time, repeat every N days, show as due in the to-do card,

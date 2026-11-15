@@ -19,6 +19,7 @@ synced as **one JSON row per user** (`planner_state`) in Supabase. Arrays are me
 | `Rule` | If-then fix from a miss, with reminder and win/fail score | Early **Experiment** |
 | `Project`, `Step`, `Page` | My day tab: projects, steps, journal / drafts / goals | (beyond spec) Project, Subtask, Note |
 | `NotifyPrefs`, `dayHours` | Preferences | User |
+| `State.resetAt` | Time of the last "Start fresh"; a synced copy older than it is discarded, not merged | (sync rule) |
 | — | — | **Distraction**, **AIRecommendation**: *not modelled yet* |
 
 Server tables: `planner_state` (the JSON row), `push_subscriptions`, `push_queue`, and **`execution_log`**
