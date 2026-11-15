@@ -220,7 +220,7 @@ h2 { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: u
 /* free time between blocks */
 .gapfree {
   position: absolute; right: 6px; z-index: 1; border: 1.5px dashed var(--line); background: transparent; border-radius: 12px;
-  color: var(--faint); font-size: 13px; font-weight: 500; text-align: left; padding: 0 12px; display: flex; align-items: center; align-content: flex-start; overflow: hidden; white-space: nowrap;
+  color: var(--faint); font-size: 13px; font-weight: 500; text-align: left; padding: 0 12px; display: flex; align-items: center; overflow: hidden; white-space: nowrap;
 }
 .gapfree:hover { color: var(--gold-text); border-color: var(--gold); }
 .block .totray { position: absolute; top: 4px; right: 6px; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: var(--surface); color: var(--muted); font-size: 13px; cursor: pointer; }
@@ -807,3 +807,9 @@ input, select, textarea { font-size: 16px !important; }
 .resetlist.keep { color: var(--muted); }
 /* a routine on a day before it started (its first week): shown, not tracked */
 .witem.preview, .block.preview { opacity: .45; border-style: dashed; }
+/* week: a whole day is a tap target that opens it in the day view */
+.wday { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.wday:hover { border-color: var(--gold); box-shadow: var(--shadow); }
+.weekhint { margin: 10px 0 0; }
+/* long free stretches: the label sits at the top, where you'd start planning */
+.gapfree.long { align-items: flex-start; padding-top: 9px; }

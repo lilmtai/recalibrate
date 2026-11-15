@@ -33,7 +33,8 @@
   block / category icons (suggested from the title, user can change).
 - Today is schedule-first: "Good morning", at most one slim notice line (closable ✕), "‹ Today ›" arrows, then the day. Now / Up next,
   to-dos and check-in chips sit below the day; Now / Up next can be hidden for the day.
-- Today: one hour-by-hour day view (no week strip; the Week tab plans ahead). Blocks show an emoji pill, "13:30 – 14:00 (30m)",
+- Today: one hour-by-hour day view (no week strip; the Week tab plans ahead).
+- Week: tap anywhere on a day (not on a block) to open it in the same day view and plan it hour by hour. Blocks show an emoji pill, "13:30 – 14:00 (30m)",
   the title and a one-tap ✓; 15-minute blocks fit on one line. Free time says "tap to plan". The same view is used
   for Reorganize (drag, resize, tray).
 - Feels native: no pinch / double-tap / field zoom (fields are 16px+), nothing wider than the screen.

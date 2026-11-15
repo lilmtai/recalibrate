@@ -144,7 +144,7 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline(
           const top = y(g.from) + 3;
           const h = y(g.to) - y(g.from) - 6;
           return (
-            <button key={`gap${g.from}`} className="gapfree" style={{ top, height: h, left: GUTTER + 4 }}
+            <button key={`gap${g.from}`} className={`gapfree ${h > 90 ? "long" : ""}`} style={{ top, height: h, left: GUTTER + 4 }}
               onClick={(e) => open({ type: "block", date, start: fmt(Math.max(g.from, Math.min(g.to - 15, minuteAtY(e.clientY, e.currentTarget.parentElement!)))) })}>
               Free · {lenLabel(g.to - g.from)} · tap to plan
             </button>

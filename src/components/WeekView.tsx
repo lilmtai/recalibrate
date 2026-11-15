@@ -31,6 +31,7 @@ export function WeekView() {
     toast(n ? `Copied ${n} block${n > 1 ? "s" : ""} from last week.` : "Nothing new to copy from last week.");
   };
 
+  const openDay = (d: string) => { setDate(d); setTab("day"); };
   const label = `${parseKey(start).toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${parseKey(days[6]).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
   return (
     <>
@@ -58,13 +59,16 @@ export function WeekView() {
         </div>
       </div>
 
+      <div className="hint weekhint">Tap a day to open it and plan it hour by hour.</div>
       <div className="weekscroll">
         <div className="week">
           {days.map((d, i) => {
             const fixes = cuesFor(state, d).filter((c) => c.kind === "fix");
             return (
-              <div key={d} className={`wday ${d === today() ? "today" : ""} ${d < today() ? "past" : ""}`}>
-                <button className="whead" onClick={() => { setDate(d); setTab("day"); }}>
+              // tap anywhere on a day (not on a block) to open it in the day view, where you can plan it
+              <div key={d} className={`wday ${d === today() ? "today" : ""} ${d < today() ? "past" : ""}`}
+                onClick={(e) => { if (!(e.target as HTMLElement).closest("button")) openDay(d); }}>
+                <button className="whead" onClick={() => openDay(d)} aria-label={`Open ${parseKey(d).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}`}>
                   <span>{DAY_SHORT[i]}</span><b>{parseKey(d).getDate()}</b>
                 </button>
                 <div className="witems">
