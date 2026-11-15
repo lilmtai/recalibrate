@@ -100,6 +100,8 @@ export interface Task extends PlanFields {
   ongoing?: boolean;
   /** minutes added with "+10 / +30" when time ran out */
   extendedMin?: number;
+  /** a routine shown on a day of its first week before it was created: visible, never asked about */
+  preview?: boolean;
   /** in the reorganize tray, not on the timeline */
   unplaced?: boolean;
   /** share of the block done, for "partial" (0.25 / 0.5 / 0.75) */

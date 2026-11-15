@@ -1,5 +1,5 @@
 import type { Cue, Note, Remind, Rule, State, Task } from "../types";
-import { addDays, fmt, norm, toMin, uid, weekday } from "./time";
+import { addDays, fmt, norm, toMin, uid, weekday, weekStart } from "./time";
 
 const VIRTUAL = "rt:";
 export const isVirtual = (id: string) => id.startsWith(VIRTUAL);
@@ -8,7 +8,8 @@ export const isVirtual = (id: string) => id.startsWith(VIRTUAL);
 export function tasksFor(s: State, date: string): Task[] {
   const real = s.tasks.filter((t) => t.date === date);
   const virtual: Task[] = s.routines
-    .filter((r) => r.days.includes(weekday(date)) && date >= r.since)
+    // a new routine fills its whole first week (so the week looks right), days before it existed as previews
+    .filter((r) => r.days.includes(weekday(date)) && date >= weekStart(r.since))
     .filter((r) => !real.some((t) => t.routineId === r.id))
     .map((r) => ({
       id: `${VIRTUAL}${r.id}:${date}`,
@@ -31,6 +32,7 @@ export function tasksFor(s: State, date: string): Task[] {
       desc: r.desc,
       status: "open",
       routineId: r.id,
+      ...(date < r.since ? { preview: true } : {}),
       ex: r.ex,
     }));
   return [...real, ...virtual]
@@ -55,7 +57,7 @@ export const notesToReview = (s: State, date: string): Note[] =>
 
 /** A block that ended (or a past day's block) with nothing logged. */
 export const needsLog = (t: Task, date: string, today: string, now: number) =>
-  t.status === "open" && !(t.ongoing && date === today) && (date < today || (date === today && toMin(t.start) + t.dur <= now));
+  t.status === "open" && !t.preview && !(t.ongoing && date === today) && (date < today || (date === today && toMin(t.start) + t.dur <= now));
 
 /** How long to draw a block: an ongoing one today grows with the clock (at least 15 min). */
 export function shownDur(t: Task, isToday: boolean, now: number): number {

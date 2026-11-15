@@ -805,3 +805,5 @@ input, select, textarea { font-size: 16px !important; }
 .resetcols { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 20px; margin: 16px 0; }
 .resetlist { margin: 6px 0 0; padding-left: 18px; font-size: 14px; line-height: 1.6; }
 .resetlist.keep { color: var(--muted); }
+/* a routine on a day before it started (its first week): shown, not tracked */
+.witem.preview, .block.preview { opacity: .45; border-style: dashed; }

@@ -168,7 +168,7 @@ export function DayView({ notificationsOn }: { notificationsOn: boolean }) {
           {(reorg || tray.length > 0) && <TrayCard tray={tray} drag={drag} selected={selected} reorg={reorg} />}
           <TodoCard date={date} isToday={isToday} drag={drag} selected={selected} />
           <CuesCard cues={cues} now={isToday ? now : -1} />
-          <CheckinRow date={date} done={tasks.filter(isWin).length} total={tasks.length} notificationsOn={notificationsOn} showNow={isToday && hidden.includes("now")} onShowNow={() => hide("now", false)} />
+          <CheckinRow date={date} done={tasks.filter(isWin).length} total={tasks.filter((t) => !t.preview).length} notificationsOn={notificationsOn} showNow={isToday && hidden.includes("now")} onShowNow={() => hide("now", false)} />
         </aside>
       </div>
 

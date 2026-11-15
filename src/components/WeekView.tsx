@@ -69,7 +69,7 @@ export function WeekView() {
                 </button>
                 <div className="witems">
                   {perDay[i].map((t) => (
-                    <button key={t.id} className={`witem s-${t.status}`} style={{ "--c": `var(--c-${t.category})` } as CSSProperties}
+                    <button key={t.id} className={`witem s-${t.status} ${t.preview ? "preview" : ""}`} title={t.preview ? "Routine: starts later this week" : undefined} style={{ "--c": `var(--c-${t.category})` } as CSSProperties}
                       onClick={() => open(d <= today() ? { type: "log", task: t } : { type: "block", date: d, task: t })}>
                       <span className="time">{t.start}</span>
                       <span className="wt">{t.emoji || suggestEmoji(t.title, t.category, state)} {t.title}{t.routineId && <span className="rt"> ↻</span>}</span>

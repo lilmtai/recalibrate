@@ -11,8 +11,10 @@ describe("tasksFor: routines appear every week without being re-planned", () => 
     expect(tasksFor(s, "2026-11-13").map((t) => t.title)).toEqual(["Gym"]); // Fri next week
   });
 
-  it("doesn't show it before it was created", () => {
-    expect(tasksFor(s, "2026-10-30")).toEqual([]);
+  it("before it was created: only previews in its first week, nothing earlier", () => {
+    // created Sunday 2026-11-01; Friday 10-30 is in that same week
+    expect(tasksFor(s, "2026-10-30").map((t) => t.preview)).toEqual([true]);
+    expect(tasksFor(s, "2026-10-23")).toEqual([]);
   });
 
   it("uses stable virtual ids, and materialize turns one into a stored task", () => {
@@ -148,5 +150,18 @@ describe("routines repeat forever until changed", () => {
     expect(tasksFor(s, "2027-11-04").map((t) => t.title)).toEqual(["Gym"]); // a Thursday a year later
     expect(tasksFor(s, "2028-11-06").map((t) => t.title)).toEqual(["Gym"]); // a Monday two years later
     expect(tasksFor(s, "2027-11-06")).toEqual([]); // Saturday: not one of its days
+  });
+});
+
+describe("a new routine fills its first week", () => {
+  it("shows on the earlier days of the week it was made, as a preview that is never asked about", () => {
+    // created Wednesday 2026-11-04 for Mon / Wed / Fri
+    const s = state({ routines: [routine({ days: [0, 2, 4], since: TODAY })] });
+    const mon = tasksFor(s, "2026-11-02");
+    expect(mon.map((t) => t.title)).toEqual(["Gym"]);
+    expect(mon[0].preview).toBe(true);
+    expect(needsLog(mon[0], "2026-11-02", TODAY, 600)).toBe(false);
+    expect(tasksFor(s, TODAY)[0].preview).toBeUndefined();
+    expect(tasksFor(s, "2026-10-30")).toEqual([]); // the week before: nothing
   });
 });

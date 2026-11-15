@@ -90,6 +90,8 @@ Rules for every agent (Claude Code, Codex):
   every field 16px+ (rule at the end of `index.css`), `overflow-x` clipped. Keep new fields ≥16px; check `scrollWidth` = 390.
 - Ongoing blocks (`Task.ongoing`, no finish time): drawn growing with the clock (`shownDur`), no halfway/end prompts,
   ✓ (`completeTask`) records the real length.
+- Routines repeat every week forever from `since` (creation date). Their first week is filled from Monday: days before
+  `since` get `preview: true` instances (faded, never asked about: `needsLog` skips them, not in the done count).
 - Routine instances: editing asks "This day only" vs "Every week"; moving one in Reorganize changes that day only, no question
   (owner: to change the routine, go to Me → Routines).
 - `supabase/schema.sql`, `supabase/push.sql`, `supabase/functions/send-push/index.ts`: server side (run/deployed by the owner in the dashboard).

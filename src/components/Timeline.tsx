@@ -184,7 +184,7 @@ export const Timeline = forwardRef<HTMLDivElement, Props>(function Timeline(
             "--c": `var(--c-${t.category})`,
           } as CSSProperties;
           const cls = [
-            "block", size, `s-${t.status}`,
+            "block", size, `s-${t.status}`, t.preview ? "preview" : "",
             dim ? "dim" : "", running ? "running" : "", live ? "dragging" : "", of > 1 ? "narrow" : "",
           ].join(" ");
           return (

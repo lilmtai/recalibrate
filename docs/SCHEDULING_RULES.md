@@ -80,7 +80,9 @@ As built (`proposeRecovery` / `applyRecovery`):
 sleep prep), and the single highest-priority task; everything else becomes optional or postponed.
 
 ## Recurring tasks
-- Weekly routines generate instances for a rolling window; editing asks "this day only / every week".
+- Weekly routines generate instances for every week from their start, with no end; editing asks "this day only /
+  every week". The week a routine is created is shown in full: days before it existed show faded previews that are
+  never counted or asked about.
 - Every-N-days tasks (free blocks) become due on `nextDue`; done moves `nextDue` forward by N days from the
   completion date; "tomorrow" snoozes one day.
 - The engine may suggest 2–3 free slots for a due floating task that fit its duration and preferred window.
