@@ -14,7 +14,7 @@ export function RoutinesView() {
         <h2>Routines</h2>
         <button className="btn primary small" onClick={() => open({ type: "routine" })}>Add routine</button>
       </div>
-      <p className="intro" style={{ marginTop: 0, marginBottom: 4 }}>Sticky blocks that appear on the days you choose, so training or deep work never has to be planned twice.</p>
+      <p className="intro" style={{ marginTop: 0, marginBottom: 4 }}>Blocks that come back every week on the days you choose, until you change or delete them. Plan them once.</p>
       {!routines.length ? (
         <div className="card empty"><div className="what">No routines yet</div><div>Add things you do on a set rhythm, like training on Mon/Wed/Fri at 18:00.</div></div>
       ) : (

@@ -141,3 +141,12 @@ describe("WYD isn't asked again for an hour that's already logged", () => {
     expect(wyd(s)).toContain(13 * 60); // 12:00–13:00 only 20 min
   });
 });
+
+describe("routines repeat forever until changed", () => {
+  it("still shows a year (and two years) later on its weekdays, with nothing to redo", () => {
+    const s = state({ routines: [routine({ days: [0, 1, 2, 3, 4], since: TODAY })] });
+    expect(tasksFor(s, "2027-11-04").map((t) => t.title)).toEqual(["Gym"]); // a Thursday a year later
+    expect(tasksFor(s, "2028-11-06").map((t) => t.title)).toEqual(["Gym"]); // a Monday two years later
+    expect(tasksFor(s, "2027-11-06")).toEqual([]); // Saturday: not one of its days
+  });
+});

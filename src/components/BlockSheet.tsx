@@ -138,7 +138,7 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
       }
       if (fromNote) s.notes = s.notes.filter((n) => n.id !== fromNote);
     });
-    toast(isRoutine && !task ? (routine ? "Routine updated." : `Routine added: ${days.map((x) => DAY_SHORT[x]).join(", ")}, every week. ${firstLabel(date || today(), days)}`)
+    toast(isRoutine && !task ? (routine ? "Routine updated." : `Routine added: ${days.map((x) => DAY_SHORT[x]).join(", ")}, every week until you change it. ${firstLabel(date || today(), days)}`)
       : everyWeek ? "Saved for every week." : inRoutineInstance ? "Saved for this day only." : "Saved.");
     close();
   }
@@ -160,7 +160,7 @@ export function BlockSheet({ date, task, routine, routineMode, start: startHint,
   const heading = routine ? "Edit routine" : routineMode ? "New routine" : task ? "Edit block" : "Add a block";
   return (
     <Sheet title={heading} onClose={close}
-      sub={routineMode || routine ? "A routine repeats on the days you pick." : date ? longDate(date) : undefined}>
+      sub={routineMode || routine ? "A routine repeats on the days you pick, every week, until you change or delete it." : date ? longDate(date) : undefined}>
       <div className="field"><label htmlFor="b-title">What</label>
         <div className="titlerow">
           <button type="button" className="emojipill big" aria-label="Choose an emoji" onClick={() => setPicking(!picking)}>{emoji || suggestEmoji(title, category, state)}</button>
